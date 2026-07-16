@@ -141,33 +141,61 @@ class _WeekHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A plain Row can't truly center the date text here: the left side is
+    // just the back chevron, while the right side is the (optional) Heute
+    // button plus the forward chevron — different widths, so a
+    // Row+Expanded centers the text within a lopsided remainder instead of
+    // the header as a whole. A Stack with Align pins each side
+    // independently and centers the text against the full width instead.
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      child: Row(
-        children: [
-          IconButton(icon: const Icon(Icons.chevron_left), onPressed: onPrev),
-          Expanded(
-            child: Text(
+      child: SizedBox(
+        height: 48,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Text(
               '${_fmtDay(start)} – ${_fmtDay(end)} ${end.year}',
               textAlign: TextAlign.center,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-          ),
-          if (!isToday)
-            TextButton(
-              onPressed: onToday,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: onPrev,
               ),
-              child: const Text('Heute'),
-            )
-          else
-            const SizedBox(width: 48),
-          IconButton(icon: const Icon(Icons.chevron_right), onPressed: onNext),
-        ],
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isToday) ...[
+                    FilledButton.tonal(
+                      onPressed: onToday,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Heute'),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: onNext,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
