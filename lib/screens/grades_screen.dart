@@ -14,6 +14,7 @@ class _GradesScreenState extends State<GradesScreen> {
   GradesResult? _result;
   String? _error;
   bool _isRefreshing = false;
+  List<GradeChange> _changes = [];
 
   @override
   void initState() {
@@ -33,12 +34,13 @@ class _GradesScreenState extends State<GradesScreen> {
     setState(() => _isRefreshing = true);
 
     try {
-      final fresh = await GradesService().fetchGrades();
+      final (fresh, changes) = await GradesService().fetchGradesDetailed();
       if (!mounted) return;
       setState(() {
         _result = fresh;
         _error = null;
         _isRefreshing = false;
+        if (changes.isNotEmpty) _changes = changes;
       });
     } catch (e) {
       if (!mounted) return;
@@ -59,6 +61,8 @@ class _GradesScreenState extends State<GradesScreen> {
   }
 
   Future<void> _refresh() => _load(forceRefresh: true);
+
+  void _dismissChanges() => setState(() => _changes = []);
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +96,10 @@ class _GradesScreenState extends State<GradesScreen> {
       final grouped = _groupBySemester(result.grades);
       final semesters = _sortedSemesters(grouped);
 
-      final items = <Object>[_SummaryCard(result: result)];
+      final items = <Object>[
+        if (_changes.isNotEmpty) _changes,
+        _SummaryCard(result: result),
+      ];
       for (final semester in semesters) {
         items.add(semester);
         items.addAll(grouped[semester]!);
@@ -103,6 +110,9 @@ class _GradesScreenState extends State<GradesScreen> {
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
+          if (item is List<GradeChange>) {
+            return _ChangesBanner(changes: item, onDismiss: _dismissChanges);
+          }
           if (item is _SummaryCard) return item;
           if (item is String) return _SemesterHeader(semester: item);
           return Padding(
@@ -120,6 +130,64 @@ class _GradesScreenState extends State<GradesScreen> {
           child: RefreshIndicator(onRefresh: _refresh, child: body),
         ),
       ],
+    );
+  }
+}
+
+class _ChangesBanner extends StatelessWidget {
+  const _ChangesBanner({required this.changes, required this.onDismiss});
+  final List<GradeChange> changes;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final onColor = colorScheme.onTertiaryContainer;
+
+    return Card(
+      color: colorScheme.tertiaryContainer,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.notifications_active_outlined, color: onColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    changes.length == 1
+                        ? 'Notenänderung'
+                        : '${changes.length} Notenänderungen',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: onColor,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: onColor, size: 20),
+                  onPressed: onDismiss,
+                  tooltip: 'Ausblenden',
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            for (final change in changes)
+              Padding(
+                padding: const EdgeInsets.only(left: 32, top: 2),
+                child: Text(
+                  change.isNew || change.oldNote == null
+                      ? '${change.modul}: ${change.newNote}'
+                      : '${change.modul}: ${change.oldNote} → ${change.newNote}',
+                  style: TextStyle(color: onColor),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

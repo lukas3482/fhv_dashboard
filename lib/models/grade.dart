@@ -98,6 +98,23 @@ class Grade {
       };
 }
 
+/// A detected difference between a previously cached grade and the
+/// freshly fetched one — either a brand-new graded module or a module
+/// whose assessment changed.
+class GradeChange {
+  final String modul;
+  final String? oldNote;
+  final String newNote;
+  final bool isNew;
+
+  const GradeChange({
+    required this.modul,
+    required this.oldNote,
+    required this.newNote,
+    required this.isNew,
+  });
+}
+
 class GradesResult {
   final List<Grade> grades;
   final int earnedCredits;

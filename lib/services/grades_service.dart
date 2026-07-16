@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/grade.dart';
 import 'auth_service.dart';
+import 'notification_service.dart';
 
 class GradesService {
   static const _notenUrl = 'https://a5.fhv.at/de/noten.php';
@@ -46,8 +47,14 @@ class GradesService {
   }
 
   Future<GradesResult> fetchGrades() async {
-    final response = await AuthService().dio.get(_notenUrl);
+    final (result, _) = await fetchGradesDetailed();
+    return result;
+  }
 
+  Future<(GradesResult, List<GradeChange>)> fetchGradesDetailed() async {
+    final oldCached = await loadCached();
+
+    final response = await AuthService().dio.get(_notenUrl);
     if (response.statusCode != 200) {
       throw Exception(
         'Notenseite konnte nicht geladen werden (${response.statusCode})',
@@ -55,8 +62,63 @@ class GradesService {
     }
 
     final result = _parseHtml(response.data.toString());
+    final changes = oldCached == null
+        ? const <GradeChange>[]
+        : _diffGrades(oldCached.grades, result.grades);
+
     await _saveCache(result);
-    return result;
+    if (changes.isNotEmpty) {
+      await NotificationService().showGradeChanges(changes);
+    }
+
+    return (result, changes);
+  }
+
+  List<GradeChange> _diffGrades(List<Grade> oldGrades, List<Grade> newGrades) {
+    final oldByModul = {for (final g in oldGrades) g.modul: g};
+    final changes = <GradeChange>[];
+
+    for (final grade in newGrades) {
+      final newNote = _effectiveNote(grade);
+      if (newNote.isEmpty) continue;
+
+      final old = oldByModul[grade.modul];
+      if (old == null) {
+        changes.add(
+          GradeChange(
+            modul: grade.modul,
+            oldNote: null,
+            newNote: newNote,
+            isNew: true,
+          ),
+        );
+        continue;
+      }
+
+      final oldNote = _effectiveNote(old);
+      if (oldNote != newNote) {
+        changes.add(
+          GradeChange(
+            modul: grade.modul,
+            oldNote: oldNote.isEmpty ? null : oldNote,
+            newNote: newNote,
+            isNew: false,
+          ),
+        );
+      }
+    }
+
+    return changes;
+  }
+
+  String _effectiveNote(Grade grade) {
+    if (grade.note.isNotEmpty) return grade.note;
+    if (grade.bewertung.isNotEmpty &&
+        grade.bewertung != '-' &&
+        !grade.bewertung.toLowerCase().contains('folgt')) {
+      return grade.bewertung;
+    }
+    return '';
   }
 
   GradesResult _parseHtml(String html) {
