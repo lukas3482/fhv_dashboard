@@ -70,15 +70,21 @@ class _StundenplanScreenState extends State<StundenplanScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline,
-                          size: 48, color: Colors.red),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red,
+                      ),
                       const SizedBox(height: 16),
-                      Text(snapshot.error.toString(),
-                          textAlign: TextAlign.center),
+                      Text(
+                        snapshot.error.toString(),
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: 16),
                       FilledButton(
-                          onPressed: _load,
-                          child: const Text('Erneut versuchen')),
+                        onPressed: _load,
+                        child: const Text('Erneut versuchen'),
+                      ),
                     ],
                   ),
                 );
@@ -87,7 +93,8 @@ class _StundenplanScreenState extends State<StundenplanScreen> {
               final grouped = snapshot.data!;
               if (grouped.isEmpty) {
                 return const Center(
-                    child: Text('Keine Veranstaltungen diese Woche.'));
+                  child: Text('Keine Veranstaltungen diese Woche.'),
+                );
               }
 
               final days = grouped.keys.toList()..sort();
@@ -95,8 +102,10 @@ class _StundenplanScreenState extends State<StundenplanScreen> {
               return RefreshIndicator(
                 onRefresh: () async => _load(),
                 child: ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   itemCount: days.length,
                   itemBuilder: (context, i) {
                     final day = days[i];
@@ -112,8 +121,6 @@ class _StundenplanScreenState extends State<StundenplanScreen> {
     );
   }
 }
-
-// ── Week navigation header ────────────────────────────────────────────────────
 
 class _WeekHeader extends StatelessWidget {
   const _WeekHeader({
@@ -139,8 +146,7 @@ class _WeekHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Row(
         children: [
-          IconButton(
-              icon: const Icon(Icons.chevron_left), onPressed: onPrev),
+          IconButton(icon: const Icon(Icons.chevron_left), onPressed: onPrev),
           Expanded(
             child: Text(
               '${_fmtDay(start)} – ${_fmtDay(end)} ${end.year}',
@@ -160,8 +166,7 @@ class _WeekHeader extends StatelessWidget {
             )
           else
             const SizedBox(width: 48),
-          IconButton(
-              icon: const Icon(Icons.chevron_right), onPressed: onNext),
+          IconButton(icon: const Icon(Icons.chevron_right), onPressed: onNext),
         ],
       ),
     );
@@ -169,14 +174,22 @@ class _WeekHeader extends StatelessWidget {
 
   static String _fmtDay(DateTime d) {
     const months = [
-      'Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'
+      'Jan',
+      'Feb',
+      'Mär',
+      'Apr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Dez',
     ];
     return '${d.day}. ${months[d.month - 1]}';
   }
 }
-
-// ── Day section ───────────────────────────────────────────────────────────────
 
 class _DaySection extends StatelessWidget {
   const _DaySection({required this.day, required this.events});
@@ -194,34 +207,49 @@ class _DaySection extends StatelessWidget {
           child: Text(
             _fmtHeader(day),
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4,
-                ),
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+            ),
           ),
         ),
-        ...events.map((e) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _EventCard(event: e),
-            )),
+        ...events.map(
+          (e) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _EventCard(event: e),
+          ),
+        ),
       ],
     );
   }
 
   static String _fmtHeader(DateTime d) {
     const weekdays = [
-      'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag',
-      'Freitag', 'Samstag', 'Sonntag'
+      'Montag',
+      'Dienstag',
+      'Mittwoch',
+      'Donnerstag',
+      'Freitag',
+      'Samstag',
+      'Sonntag',
     ];
     const months = [
-      'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+      'Januar',
+      'Februar',
+      'März',
+      'April',
+      'Mai',
+      'Juni',
+      'Juli',
+      'August',
+      'September',
+      'Oktober',
+      'November',
+      'Dezember',
     ];
     return '${weekdays[d.weekday - 1]}, ${d.day}. ${months[d.month - 1]}';
   }
 }
-
-// ── Event card ────────────────────────────────────────────────────────────────
 
 class _EventCard extends StatelessWidget {
   const _EventCard({required this.event});
@@ -230,8 +258,7 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeStr =
-        '${_t(event.startDate)} – ${_t(event.endDate)}';
+    final timeStr = '${_t(event.startDate)} – ${_t(event.endDate)}';
 
     return Card(
       clipBehavior: Clip.hardEdge,
@@ -243,19 +270,21 @@ class _EventCard extends StatelessWidget {
             Container(width: 5, color: event.color),
             Expanded(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Time + occasion chip
                     Row(
                       children: [
-                        Text(timeStr,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(fontWeight: FontWeight.w600)),
+                        Text(
+                          timeStr,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
                         const Spacer(),
                         if (event.occasion.isNotEmpty)
                           _Chip(event.occasion, event.color),
@@ -266,36 +295,52 @@ class _EventCard extends StatelessWidget {
                     Text(
                       event.eventName,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 15),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
                     // Room + building
                     if (event.rooms.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Row(children: [
-                        const Icon(Icons.room_outlined,
-                            size: 14, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            [event.rooms, if (event.buildings.isNotEmpty) event.buildings]
-                                .join(' · '),
-                            style: Theme.of(context).textTheme.bodySmall,
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.room_outlined,
+                            size: 14,
+                            color: Colors.grey,
                           ),
-                        ),
-                      ]),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              [
+                                event.rooms,
+                                if (event.buildings.isNotEmpty) event.buildings,
+                              ].join(' · '),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                     // Lecturer
                     if (event.lecturers.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Row(children: [
-                        const Icon(Icons.person_outline,
-                            size: 14, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(event.lecturers,
-                              style: Theme.of(context).textTheme.bodySmall),
-                        ),
-                      ]),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.person_outline,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              event.lecturers,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                     // Exam parts
                     if (event.examParts.isNotEmpty) ...[

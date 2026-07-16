@@ -15,7 +15,8 @@ class GradesService {
 
     if (response.statusCode != 200) {
       throw Exception(
-          'Notenseite konnte nicht geladen werden (${response.statusCode})');
+        'Notenseite konnte nicht geladen werden (${response.statusCode})',
+      );
     }
 
     return _parseHtml(response.data.toString());
@@ -24,7 +25,6 @@ class GradesService {
   GradesResult _parseHtml(String html) {
     final document = html_parser.parse(html);
 
-    // ── Summary stats ──────────────────────────────────────────────────────
     final creditsRaw =
         document.querySelector('#span-possible-credits')?.text.trim() ?? '';
     final creditsParts = creditsRaw.split('/');
@@ -37,22 +37,25 @@ class GradesService {
         document.querySelector('#span-average-grade-points')?.text.trim() ?? '';
     final avg = double.tryParse(avgRaw.replaceAll(',', '.'));
 
-    // ── Grade rows ─────────────────────────────────────────────────────────
-    // Exclude legend tables (class pruefungsergebnisse__legend) and
-    // only look at the structured grade tables.
     final tables = document
         .querySelectorAll('table.table.table-bordered.table-update')
         .where((t) => !t.classes.contains('pruefungsergebnisse__legend'))
         .toList();
 
     const keys = [
-      'modul', 'status', 'note', 'bewertung', 'teilbewertung',
-      'credits', 'versuch', 'datum', 'semester', 'durchschnitt', 'anerkennung',
+      'modul',
+      'status',
+      'note',
+      'bewertung',
+      'teilbewertung',
+      'credits',
+      'versuch',
+      'datum',
+      'semester',
+      'durchschnitt',
+      'anerkennung',
     ];
 
-    // Rows for weighted partial grades ("Teilnoten") look like
-    // "(60%) Schriftliche Prüfung, Klausur" and have no status/credits of
-    // their own — they belong to the module row directly above them.
     final partialPattern = RegExp(r'^\((\d+%)\)\s*(.*)$');
 
     final grades = <Grade>[];
@@ -72,22 +75,25 @@ class GradesService {
         if (modul.isNotEmpty && seen.add(modul)) {
           final rawBewertung = main['bewertung'] ?? '';
           final rawTeilbewertung = main['teilbewertung'] ?? '';
-          final effectiveBewertung =
-              rawBewertung.isNotEmpty ? rawBewertung : rawTeilbewertung;
-          grades.add(Grade(
-            modul: modul,
-            status: main['status'] ?? '',
-            note: main['note'] ?? '',
-            bewertung: effectiveBewertung.replaceAll('Bewertung folgt', '-'),
-            teilbewertung: rawTeilbewertung,
-            credits: main['credits'] ?? '',
-            versuch: main['versuch'] ?? '',
-            datum: main['datum'] ?? '',
-            semester: main['semester'] ?? '',
-            durchschnitt: main['durchschnitt'] ?? '',
-            anerkennung: main['anerkennung'] ?? '',
-            teilnoten: pendingPartials,
-          ));
+          final effectiveBewertung = rawBewertung.isNotEmpty
+              ? rawBewertung
+              : rawTeilbewertung;
+          grades.add(
+            Grade(
+              modul: modul,
+              status: main['status'] ?? '',
+              note: main['note'] ?? '',
+              bewertung: effectiveBewertung.replaceAll('Bewertung folgt', '-'),
+              teilbewertung: rawTeilbewertung,
+              credits: main['credits'] ?? '',
+              versuch: main['versuch'] ?? '',
+              datum: main['datum'] ?? '',
+              semester: main['semester'] ?? '',
+              durchschnitt: main['durchschnitt'] ?? '',
+              anerkennung: main['anerkennung'] ?? '',
+              teilnoten: pendingPartials,
+            ),
+          );
         }
         pendingMain = null;
         pendingPartials = <PartialGrade>[];
@@ -108,13 +114,15 @@ class GradesService {
         final partialMatch = partialPattern.firstMatch(map['modul'] ?? '');
         if (partialMatch != null) {
           if (pendingMain != null) {
-            pendingPartials.add(PartialGrade(
-              gewichtung: partialMatch.group(1)!,
-              bezeichnung: partialMatch.group(2)!.trim(),
-              bewertung: map['bewertung'] ?? '',
-              teilbewertung: map['teilbewertung'] ?? '',
-              note: map['note'] ?? '',
-            ));
+            pendingPartials.add(
+              PartialGrade(
+                gewichtung: partialMatch.group(1)!,
+                bezeichnung: partialMatch.group(2)!.trim(),
+                bewertung: map['bewertung'] ?? '',
+                teilbewertung: map['teilbewertung'] ?? '',
+                note: map['note'] ?? '',
+              ),
+            );
           }
           continue;
         }
