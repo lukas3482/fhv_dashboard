@@ -13,6 +13,38 @@ class SettingsScreen extends StatelessWidget {
     await BackgroundService.updateFrequency(Duration(minutes: minutes));
   }
 
+  Future<void> _editTargetEcts(BuildContext context, int current) async {
+    final controller = TextEditingController(text: current.toString());
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ziel-ECTS'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(suffixText: 'ECTS'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context, int.tryParse(controller.text.trim()));
+            },
+            child: const Text('Speichern'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result > 0) {
+      await SettingsService().setTargetEcts(result);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = SettingsService();
@@ -43,6 +75,26 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+          const Divider(height: 1),
+          const _SectionHeader('Studienfortschritt'),
+          ValueListenableBuilder<int>(
+            valueListenable: settings.targetEcts,
+            builder: (context, target, _) => ListTile(
+              title: const Text('Ziel-ECTS'),
+              subtitle: const Text(
+                'Fallback für den Fortschrittsbalken, falls die FHV-Seite '
+                'kein Ziel liefert.',
+              ),
+              trailing: Text(
+                '$target',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+              onTap: () => _editTargetEcts(context, target),
             ),
           ),
           const Divider(height: 1),

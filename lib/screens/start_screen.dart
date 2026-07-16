@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/grade.dart';
 import '../models/profile_info.dart';
 import '../models/timetable_event.dart';
+import '../services/grades_service.dart';
 import '../services/profile_service.dart';
+import '../services/settings_service.dart';
 import '../services/timetable_service.dart';
 
 class StartScreen extends StatefulWidget {
@@ -18,18 +21,40 @@ class _StartScreenState extends State<StartScreen> {
   String? _error;
   bool _isRefreshing = false;
   Future<TimetableEvent?>? _nextEventFuture;
+  Future<GradesResult?>? _gradesFuture;
 
   @override
   void initState() {
     super.initState();
     _load();
     _loadNextEvent();
+    _loadGrades();
   }
 
   void _loadNextEvent() {
     setState(() {
       _nextEventFuture = TimetableService().fetchNextEvent();
     });
+  }
+
+  void _loadGrades({bool forceRefresh = false}) {
+    setState(() {
+      _gradesFuture = _fetchGradesForProgress(forceRefresh: forceRefresh);
+    });
+  }
+
+  Future<GradesResult?> _fetchGradesForProgress({
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh) {
+      final cached = await GradesService().loadCached();
+      if (cached != null) return cached;
+    }
+    try {
+      return await GradesService().fetchGrades();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
@@ -71,6 +96,7 @@ class _StartScreenState extends State<StartScreen> {
 
   Future<void> _refresh() async {
     _loadNextEvent();
+    _loadGrades(forceRefresh: true);
     await _load(forceRefresh: true);
   }
 
@@ -108,6 +134,19 @@ class _StartScreenState extends State<StartScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: _NextEventCard(event: snapshot.data!),
+                    );
+                  },
+                ),
+                FutureBuilder<GradesResult?>(
+                  future: _gradesFuture,
+                  builder: (context, snapshot) {
+                    final result = snapshot.data;
+                    if (result == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _EctsProgressCard(result: result),
                     );
                   },
                 ),
@@ -453,9 +492,6 @@ class _NextEventCard extends StatelessWidget {
     if (diff == 0) return 'Heute';
     if (diff == 1) return 'Morgen';
 
-    // A weekday name alone is only unambiguous within the current week —
-    // beyond that ("nächsten Donnerstag" vs. "irgendwann im Herbst") it
-    // needs the actual date instead.
     final monday = today.subtract(Duration(days: today.weekday - 1));
     final sunday = monday.add(const Duration(days: 6));
     if (!day.isBefore(monday) && !day.isAfter(sunday)) {
@@ -491,5 +527,86 @@ class _NextEventCard extends StatelessWidget {
     ];
     final base = '${d.day}. ${months[d.month - 1]}';
     return d.year == DateTime.now().year ? base : '$base ${d.year}';
+  }
+}
+
+class _EctsProgressCard extends StatelessWidget {
+  const _EctsProgressCard({required this.result});
+  final GradesResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: SettingsService().targetEcts,
+      builder: (context, targetEcts, _) {
+        // FHV's own "possible credits" total is 0 for some study programs
+        // (server-side target isn't configured) — fall back to the
+        // user-configured target from Settings in that case.
+        final total = result.totalCredits ?? targetEcts;
+        return _buildCard(context, total);
+      },
+    );
+  }
+
+  Widget _buildCard(BuildContext context, int total) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final earned = result.earnedCredits;
+    final progress = total > 0 ? (earned / total).clamp(0.0, 1.0) : 0.0;
+    final percent = (progress * 100).round();
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.school_outlined,
+                  size: 16,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Studienfortschritt',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.primary,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '$percent %',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '$earned / $total ECTS',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

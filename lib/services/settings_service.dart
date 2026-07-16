@@ -5,8 +5,10 @@ class SettingsService {
   static const _themeModeKey = 'settings_theme_mode';
   static const _notificationsEnabledKey = 'settings_notifications_enabled';
   static const _refreshIntervalKey = 'settings_refresh_interval_minutes';
+  static const _targetEctsKey = 'settings_target_ects';
 
   static const defaultRefreshIntervalMinutes = 30;
+  static const defaultTargetEcts = 180;
 
   static final SettingsService _instance = SettingsService._internal();
   factory SettingsService() => _instance;
@@ -17,6 +19,7 @@ class SettingsService {
   final refreshIntervalMinutes = ValueNotifier<int>(
     defaultRefreshIntervalMinutes,
   );
+  final targetEcts = ValueNotifier<int>(defaultTargetEcts);
 
   SharedPreferences? _prefs;
   bool _loaded = false;
@@ -38,6 +41,7 @@ class SettingsService {
         prefs.getBool(_notificationsEnabledKey) ?? true;
     refreshIntervalMinutes.value =
         prefs.getInt(_refreshIntervalKey) ?? defaultRefreshIntervalMinutes;
+    targetEcts.value = prefs.getInt(_targetEctsKey) ?? defaultTargetEcts;
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -53,5 +57,10 @@ class SettingsService {
   Future<void> setRefreshIntervalMinutes(int minutes) async {
     refreshIntervalMinutes.value = minutes;
     await _prefs?.setInt(_refreshIntervalKey, minutes);
+  }
+
+  Future<void> setTargetEcts(int ects) async {
+    targetEcts.value = ects;
+    await _prefs?.setInt(_targetEctsKey, ects);
   }
 }
