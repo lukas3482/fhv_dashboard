@@ -1,24 +1,41 @@
 import 'package:flutter/material.dart';
 
 import 'screens/splash_screen.dart';
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SettingsService().load();
   runApp(const FhvDashboardApp());
 }
 
 class FhvDashboardApp extends StatelessWidget {
   const FhvDashboardApp({super.key});
 
+  static const _seedColor = Color(0xFF2E7D32);
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FHV Dashboard',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
-        useMaterial3: true,
-      ),
-      home: const SplashScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: SettingsService().themeMode,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'FHV Dashboard',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: _seedColor),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: _seedColor,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: mode,
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }
