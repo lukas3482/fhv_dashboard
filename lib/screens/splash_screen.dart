@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
@@ -27,7 +28,6 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    // Session expired — try silent re-login with stored credentials
     final hasCredentials = await auth.hasCredentials();
     if (hasCredentials) {
       final success = await auth.autoLogin();

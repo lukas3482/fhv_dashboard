@@ -30,25 +30,23 @@ class AuthService {
       ignoreExpires: false,
       storage: FileStorage('${dir.path}/.cookies/'),
     );
-    _dio = Dio(BaseOptions(
-      followRedirects: false,
-      validateStatus: (status) => status != null && status < 500,
-    ));
+    _dio = Dio(
+      BaseOptions(
+        followRedirects: false,
+        validateStatus: (status) => status != null && status < 500,
+      ),
+    );
     _dio.interceptors.add(CookieManager(_cookieJar));
-    _dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      responseHeader: true,
-    ));
     _initialized = true;
   }
 
-  Future<bool> login(String username, String password,
-      {bool permanentLogin = false}) async {
+  Future<bool> login(
+    String username,
+    String password, {
+    bool permanentLogin = false,
+  }) async {
     await init();
     try {
-      // followRedirects: true so we end up at the post-login page,
-      // matching the behaviour of Python requests.Session which auto-follows.
       await _dio.post(
         _loginUrl,
         data: {
@@ -63,23 +61,19 @@ class AuthService {
         ),
       );
 
-      // The login handler is an AJAX endpoint that returns 200 whether the
-      // credentials were right or wrong — its status code is not a
-      // reliable success signal. Verify by requesting a protected page
-      // instead, the same way an already-existing session is validated.
       _isLoggedIn = await checkSession();
 
       if (_isLoggedIn) {
         await _storage.write(key: 'username', value: username);
         await _storage.write(key: 'password', value: password);
 
-        final cookies =
-            await _cookieJar.loadForRequest(Uri.parse(_loginUrl));
+        final cookies = await _cookieJar.loadForRequest(Uri.parse(_loginUrl));
         final session = cookies.firstOrNull;
         if (session != null) {
           await _storage.write(
-              key: 'session_id',
-              value: '${session.name}=${session.value}');
+            key: 'session_id',
+            value: '${session.name}=${session.value}',
+          );
         }
       }
 
@@ -93,18 +87,14 @@ class AuthService {
   Future<bool> checkSession() async {
     await init();
     try {
-      // If noten.php returns 200 we have a valid session.
-      // A redirect (302) to the login page means the session expired.
       final response = await _dio.get(
         _sessionCheckUrl,
-        options: Options(
-          followRedirects: false,
-          validateStatus: (_) => true,
-        ),
+        options: Options(followRedirects: false, validateStatus: (_) => true),
       );
       final status = response.statusCode ?? 0;
       final location = response.headers.value('location') ?? '';
-      _isLoggedIn = status == 200 ||
+      _isLoggedIn =
+          status == 200 ||
           (status == 302 && !location.toLowerCase().contains('login'));
       return _isLoggedIn;
     } catch (_) {
@@ -136,8 +126,7 @@ class AuthService {
 
   String _mapDioError(DioException e) {
     return switch (e.type) {
-      DioExceptionType.connectionTimeout ||
-      DioExceptionType.receiveTimeout =>
+      DioExceptionType.connectionTimeout || DioExceptionType.receiveTimeout =>
         'Verbindung zum Server hat zu lange gedauert.',
       DioExceptionType.connectionError =>
         'Keine Verbindung. Bitte Internetverbindung prüfen.',

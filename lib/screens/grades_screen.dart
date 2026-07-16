@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/grade.dart';
 import '../services/grades_service.dart';
-// GradesResult is defined in grade.dart and re-exported via grades_service.dart
 
 class GradesScreen extends StatefulWidget {
   const GradesScreen({super.key});
@@ -83,8 +82,6 @@ class _GradesScreenState extends State<GradesScreen> {
     );
   }
 }
-
-// ── Summary card ─────────────────────────────────────────────────────────────
 
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({required this.result});
@@ -168,9 +165,6 @@ class _StatColumn extends StatelessWidget {
   }
 }
 
-// Ordering: SS Y = Y*2,  WS Y = Y*2+1
-// → WS 2024 (4049) sits correctly between SS 2024 (4048) and SS 2025 (4050)
-// Handles: "WS 2024", "SS 2025", "WS 2024/25", "Wintersemester 2024", …
 int _semesterSortValue(String semester) {
   final s = semester.trim();
   final isWinter = s.startsWith('WS') || s.toLowerCase().startsWith('winter');
@@ -302,8 +296,6 @@ class _GradeCard extends StatelessWidget {
     );
   }
 }
-
-// ── Detail bottom sheet ──────────────────────────────────────────────────────
 
 class _GradeDetailSheet extends StatelessWidget {
   const _GradeDetailSheet({required this.grade});

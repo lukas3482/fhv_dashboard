@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import 'grades_screen.dart';
 import 'login_screen.dart';
 import 'pruefungstermine_screen.dart';
+import 'start_screen.dart';
 import 'stundenplan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,12 +18,13 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   static const _pages = [
+    StartScreen(),
     StundenplanScreen(),
     PruefungstermineScreen(),
     GradesScreen(),
   ];
 
-  static const _titles = ['Stundenplan', 'Prüfungstermine', 'Noten'];
+  static const _titles = ['Start', 'Stundenplan', 'Prüfungstermine', 'Noten'];
 
   Future<void> _logout() async {
     await AuthService().logout();
@@ -51,6 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Start',
+          ),
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
             selectedIcon: Icon(Icons.calendar_today),

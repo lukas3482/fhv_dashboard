@@ -9,35 +9,30 @@ class TimetableService {
   factory TimetableService() => _instance;
   TimetableService._internal();
 
-  Future<Map<DateTime, List<TimetableEvent>>> fetchWeek(
-      DateTime monday) async {
+  Future<Map<DateTime, List<TimetableEvent>>> fetchWeek(DateTime monday) async {
     final sunday = monday.add(const Duration(days: 6));
 
     final response = await AuthService().dio.get(
-          _url,
-          queryParameters: {
-            'from': _fmt(monday),
-            'to': _fmt(sunday),
-          },
-        );
+      _url,
+      queryParameters: {'from': _fmt(monday), 'to': _fmt(sunday)},
+    );
 
     if (response.statusCode == 302) throw Exception('Session abgelaufen.');
     if (response.statusCode != 200) {
-      throw Exception('Fehler beim Laden des Stundenplans (${response.statusCode})');
+      throw Exception(
+        'Fehler beim Laden des Stundenplans (${response.statusCode})',
+      );
     }
 
-    // Empty week: server returns bare "[]" instead of {"data": [...]}
     final body = response.data;
     if (body is List) return {};
 
-    final raw = (body['data'] as List? ?? [])
-        .cast<Map<String, dynamic>>();
+    final raw = (body['data'] as List? ?? []).cast<Map<String, dynamic>>();
 
     final events = _mergeBySlot(raw);
     return _groupByDay(events);
   }
 
-  // Events with the same subject + time slot → one card, merged exam_parts
   List<TimetableEvent> _mergeBySlot(List<Map<String, dynamic>> raw) {
     final map = <String, Map<String, dynamic>>{};
     final extraParts = <String, List<String>>{};
@@ -55,18 +50,24 @@ class TimetableService {
     }
 
     return map.entries
-        .map((e) =>
-            TimetableEvent.fromJson(e.value, extraExamParts: extraParts[e.key]!))
+        .map(
+          (e) => TimetableEvent.fromJson(
+            e.value,
+            extraExamParts: extraParts[e.key]!,
+          ),
+        )
         .toList()
       ..sort((a, b) => a.startDate.compareTo(b.startDate));
   }
 
-  Map<DateTime, List<TimetableEvent>> _groupByDay(
-      List<TimetableEvent> events) {
+  Map<DateTime, List<TimetableEvent>> _groupByDay(List<TimetableEvent> events) {
     final result = <DateTime, List<TimetableEvent>>{};
     for (final event in events) {
       final day = DateTime(
-          event.startDate.year, event.startDate.month, event.startDate.day);
+        event.startDate.year,
+        event.startDate.month,
+        event.startDate.day,
+      );
       result.putIfAbsent(day, () => []).add(event);
     }
     return result;
@@ -74,5 +75,4 @@ class TimetableService {
 
   static String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
 }
