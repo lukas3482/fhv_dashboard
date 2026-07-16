@@ -19,7 +19,11 @@ class _PruefungstermineScreenState extends State<PruefungstermineScreen> {
     _future = ExamService().fetchExams();
   }
 
-  void _refresh() => setState(() => _future = ExamService().fetchExams());
+  void _refresh() {
+    setState(() {
+      _future = ExamService().fetchExams();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

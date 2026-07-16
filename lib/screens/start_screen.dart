@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/profile_info.dart';
+import '../models/timetable_event.dart';
 import '../services/profile_service.dart';
+import '../services/timetable_service.dart';
 
 class StartScreen extends StatefulWidget {
   const StartScreen({super.key});
@@ -15,11 +17,19 @@ class _StartScreenState extends State<StartScreen> {
   ProfileInfo? _profile;
   String? _error;
   bool _isRefreshing = false;
+  Future<TimetableEvent?>? _nextEventFuture;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadNextEvent();
+  }
+
+  void _loadNextEvent() {
+    setState(() {
+      _nextEventFuture = TimetableService().fetchNextEvent();
+    });
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
@@ -59,7 +69,10 @@ class _StartScreenState extends State<StartScreen> {
     }
   }
 
-  Future<void> _refresh() => _load(forceRefresh: true);
+  Future<void> _refresh() async {
+    _loadNextEvent();
+    await _load(forceRefresh: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +97,20 @@ class _StartScreenState extends State<StartScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               children: [
+                FutureBuilder<TimetableEvent?>(
+                  future: _nextEventFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done ||
+                        snapshot.hasError ||
+                        snapshot.data == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _NextEventCard(event: snapshot.data!),
+                    );
+                  },
+                ),
                 profileSection,
                 const SizedBox(height: 16),
                 Text(
@@ -309,5 +336,160 @@ class _PlatformLinksCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _NextEventCard extends StatelessWidget {
+  const _NextEventCard({required this.event});
+  final TimetableEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final isOngoing =
+        now.isAfter(event.startDate) && now.isBefore(event.endDate);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 5, color: event.color),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isOngoing
+                              ? Icons.play_circle_outline
+                              : Icons.schedule_outlined,
+                          size: 14,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isOngoing
+                              ? 'Läuft gerade'
+                              : 'Nächste Veranstaltung — ${_relativeDay(event.startDate)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: colorScheme.primary,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      event.eventName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
+                        Text(
+                          '${_t(event.startDate)} – ${_t(event.endDate)}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                    if (event.rooms.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.room_outlined,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              [event.rooms].join(' · '),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          Text(event.lecturers),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _t(DateTime dt) =>
+      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+  static String _relativeDay(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(d.year, d.month, d.day);
+    final diff = day.difference(today).inDays;
+    if (diff == 0) return 'Heute';
+    if (diff == 1) return 'Morgen';
+
+    // A weekday name alone is only unambiguous within the current week —
+    // beyond that ("nächsten Donnerstag" vs. "irgendwann im Herbst") it
+    // needs the actual date instead.
+    final monday = today.subtract(Duration(days: today.weekday - 1));
+    final sunday = monday.add(const Duration(days: 6));
+    if (!day.isBefore(monday) && !day.isAfter(sunday)) {
+      const weekdays = [
+        'Montag',
+        'Dienstag',
+        'Mittwoch',
+        'Donnerstag',
+        'Freitag',
+        'Samstag',
+        'Sonntag',
+      ];
+      return weekdays[d.weekday - 1];
+    }
+
+    return _fmtDate(d);
+  }
+
+  static String _fmtDate(DateTime d) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mär',
+      'Apr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Dez',
+    ];
+    final base = '${d.day}. ${months[d.month - 1]}';
+    return d.year == DateTime.now().year ? base : '$base ${d.year}';
   }
 }

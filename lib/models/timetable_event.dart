@@ -14,6 +14,7 @@ class TimetableEvent {
   final Color textColor;
   final bool fullDay;
   final String comment;
+  final bool isHoliday;
 
   const TimetableEvent({
     required this.id,
@@ -29,19 +30,19 @@ class TimetableEvent {
     required this.textColor,
     required this.fullDay,
     required this.comment,
+    required this.isHoliday,
   });
 
-  factory TimetableEvent.fromJson(Map<String, dynamic> json,
-      {List<String> extraExamParts = const []}) {
+  factory TimetableEvent.fromJson(
+    Map<String, dynamic> json, {
+    List<String> extraExamParts = const [],
+  }) {
     final examPart = (json['exam_part'] as String? ?? '').trim();
-    final parts = [
-      if (examPart.isNotEmpty) examPart,
-      ...extraExamParts,
-    ];
+    final parts = [if (examPart.isNotEmpty) examPart, ...extraExamParts];
 
     return TimetableEvent(
       id: json['id'] as String? ?? '',
-      eventName: json['event_name'] as String? ?? '',
+      eventName: json['event_subject'] as String? ?? '',
       startDate: DateTime.parse(json['start_date'] as String),
       endDate: DateTime.parse(json['end_date'] as String),
       rooms: json['rooms'] as String? ?? '',
@@ -51,9 +52,12 @@ class TimetableEvent {
       lecturers: json['lecturers'] as String? ?? '',
       color: _hexColor(json['color'] as String? ?? '', const Color(0xFF3498DB)),
       textColor: _hexColor(
-          json['textColor'] as String? ?? '', const Color(0xFFFFFFFF)),
+        json['textColor'] as String? ?? '',
+        const Color(0xFFFFFFFF),
+      ),
       fullDay: json['full_day'] as bool? ?? false,
       comment: json['comment'] as String? ?? '',
+      isHoliday: json['is_holiday'] as bool? ?? false,
     );
   }
 
