@@ -7,6 +7,7 @@ import '../services/notification_service.dart';
 import 'grades_screen.dart';
 import 'login_screen.dart';
 import 'pruefungstermine_screen.dart';
+import 'room_search_screen.dart';
 import 'settings_screen.dart';
 import 'start_screen.dart';
 import 'stundenplan_screen.dart';
@@ -26,9 +27,16 @@ class _HomeScreenState extends State<HomeScreen> {
     StundenplanScreen(),
     PruefungstermineScreen(),
     GradesScreen(),
+    RoomSearchScreen(),
   ];
 
-  static const _titles = ['Start', 'Stundenplan', 'Prüfungstermine', 'Noten'];
+  static const _titles = [
+    'Start',
+    'Stundenplan',
+    'Prüfungstermine',
+    'Noten',
+    'Räume',
+  ];
 
   @override
   void initState() {
@@ -104,6 +112,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.school_outlined),
             selectedIcon: Icon(Icons.school),
             label: 'Noten',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.meeting_room_outlined),
+            selectedIcon: Icon(Icons.meeting_room),
+            label: 'Räume',
           ),
         ],
       ),
