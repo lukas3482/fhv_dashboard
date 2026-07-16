@@ -153,7 +153,7 @@ class _StartScreenState extends State<StartScreen> {
                 profileSection,
                 const SizedBox(height: 16),
                 Text(
-                  'FHV-Plattformen',
+                  'FHV-Links',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
