@@ -153,9 +153,9 @@ class _InfoDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Diese App ist eine inoffizielle Anwedung und steht in'
+            'Diese App ist eine inoffizielle Anwedung und steht in '
             'keinerlei Verbindung zur Fachhochschule Vorarlberg. '
-            'Die bereitgestelltenb Informationen, Inhalte und Funktionen'
+            'Die bereitgestellten Informationen, Inhalte und Funktionen'
             'dieser App wurde von unabhängigen Entwicklern erstellt.',
           ),
           const SizedBox(height: 16),
