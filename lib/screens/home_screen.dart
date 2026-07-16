@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/background_service.dart';
+import '../services/notification_service.dart';
 import 'grades_screen.dart';
 import 'login_screen.dart';
 import 'pruefungstermine_screen.dart';
@@ -25,6 +27,13 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   static const _titles = ['Start', 'Stundenplan', 'Prüfungstermine', 'Noten'];
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService().requestPermission();
+    BackgroundService.initialize();
+  }
 
   Future<void> _logout() async {
     await AuthService().logout();

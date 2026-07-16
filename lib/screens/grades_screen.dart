@@ -50,9 +50,9 @@ class _GradesScreenState extends State<GradesScreen> {
       });
       if (_result != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Aktualisierung fehlgeschlagen – zeige zwischengespeicherte Noten.',
+              'Aktualisierung fehlgeschlagen ($e) – zeige zwischengespeicherte Noten.',
             ),
           ),
         );

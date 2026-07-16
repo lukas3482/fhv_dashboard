@@ -54,7 +54,7 @@ class GradesService {
   Future<(GradesResult, List<GradeChange>)> fetchGradesDetailed() async {
     final oldCached = await loadCached();
 
-    final response = await AuthService().dio.get(_notenUrl);
+    final response = await AuthService().authenticatedGet(_notenUrl);
     if (response.statusCode != 200) {
       throw Exception(
         'Notenseite konnte nicht geladen werden (${response.statusCode})',
@@ -68,7 +68,9 @@ class GradesService {
 
     await _saveCache(result);
     if (changes.isNotEmpty) {
-      await NotificationService().showGradeChanges(changes);
+      try {
+        await NotificationService().showGradeChanges(changes);
+      } catch (_) {}
     }
 
     return (result, changes);

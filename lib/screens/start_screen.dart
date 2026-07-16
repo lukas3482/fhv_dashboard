@@ -49,9 +49,9 @@ class _StartScreenState extends State<StartScreen> {
       });
       if (_profile != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Aktualisierung fehlgeschlagen – zeige zwischengespeichertes Profil.',
+              'Aktualisierung fehlgeschlagen ($e) – zeige zwischengespeichertes Profil.',
             ),
           ),
         );

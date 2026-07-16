@@ -8,13 +8,13 @@ class NotificationService {
   static const _channelDescription =
       'Benachrichtigungen über neue oder geänderte Noten';
 
-  static final NotificationService _instance =
-      NotificationService._internal();
+  static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _permissionRequested = false;
 
   Future<void> init() async {
     if (_initialized) return;
@@ -25,16 +25,28 @@ class NotificationService {
       const InitializationSettings(android: androidInit, iOS: iosInit),
     );
 
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(alert: true, badge: true, sound: true);
-
     _initialized = true;
+  }
+
+  Future<void> requestPermission() async {
+    if (_permissionRequested) return;
+    _permissionRequested = true;
+    await init();
+
+    try {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.requestNotificationsPermission();
+    } catch (_) {}
+    try {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    } catch (_) {}
   }
 
   Future<void> showGradeChanges(List<GradeChange> changes) async {

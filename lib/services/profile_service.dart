@@ -47,7 +47,7 @@ class ProfileService {
   }
 
   Future<ProfileInfo> fetchProfile() async {
-    final response = await AuthService().dio.get(_profileUrl);
+    final response = await AuthService().authenticatedGet(_profileUrl);
 
     if (response.statusCode != 200) {
       throw Exception(
