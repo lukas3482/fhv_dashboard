@@ -11,10 +11,16 @@ class TimetableService {
 
   Future<Map<DateTime, List<TimetableEvent>>> fetchWeek(DateTime monday) async {
     final sunday = monday.add(const Duration(days: 6));
+    return _fetchRange(monday, sunday);
+  }
 
+  Future<Map<DateTime, List<TimetableEvent>>> _fetchRange(
+    DateTime from,
+    DateTime to,
+  ) async {
     final response = await AuthService().dio.get(
       _url,
-      queryParameters: {'from': _fmt(monday), 'to': _fmt(sunday)},
+      queryParameters: {'from': _fmt(from), 'to': _fmt(to)},
     );
 
     if (response.statusCode == 302) throw Exception('Session abgelaufen.');
@@ -56,8 +62,40 @@ class TimetableService {
             extraExamParts: extraParts[e.key]!,
           ),
         )
+        .where((e) => !e.isHoliday)
         .toList()
       ..sort((a, b) => a.startDate.compareTo(b.startDate));
+  }
+
+  Future<TimetableEvent?> fetchNextEvent() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    const windowSizesDays = [7, 23, 60, 90, 180, 60];
+    var searchStart = today;
+
+    for (final windowDays in windowSizesDays) {
+      final searchEnd = searchStart.add(Duration(days: windowDays));
+      final events = await _fetchRange(searchStart, searchEnd);
+      final upcoming = _firstUpcoming(events, now);
+      if (upcoming != null) return upcoming;
+      searchStart = searchEnd.add(const Duration(days: 1));
+    }
+
+    return null;
+  }
+
+  TimetableEvent? _firstUpcoming(
+    Map<DateTime, List<TimetableEvent>> grouped,
+    DateTime now,
+  ) {
+    final all =
+        grouped.values
+            .expand((events) => events)
+            .where((e) => e.endDate.isAfter(now))
+            .toList()
+          ..sort((a, b) => a.startDate.compareTo(b.startDate));
+    return all.isEmpty ? null : all.first;
   }
 
   Map<DateTime, List<TimetableEvent>> _groupByDay(List<TimetableEvent> events) {

@@ -7,6 +7,7 @@ import '../services/notification_service.dart';
 import 'grades_screen.dart';
 import 'login_screen.dart';
 import 'pruefungstermine_screen.dart';
+import 'settings_screen.dart';
 import 'start_screen.dart';
 import 'stundenplan_screen.dart';
 
@@ -49,6 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(context: context, builder: (context) => const _InfoDialog());
   }
 
+  void _openSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,6 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.info_outline),
             tooltip: 'Über diese App',
             onPressed: _showInfoDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Einstellungen',
+            onPressed: _openSettings,
           ),
           IconButton(
             icon: const Icon(Icons.logout),

@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../models/grade.dart';
+import 'settings_service.dart';
 
 class NotificationService {
   static const _channelId = 'grades_channel';
@@ -51,6 +52,7 @@ class NotificationService {
 
   Future<void> showGradeChanges(List<GradeChange> changes) async {
     if (changes.isEmpty) return;
+    if (!SettingsService().notificationsEnabled.value) return;
     await init();
 
     final lines = changes.map((c) {

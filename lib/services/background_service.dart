@@ -3,6 +3,7 @@ import 'package:workmanager/workmanager.dart';
 
 import 'auth_service.dart';
 import 'grades_service.dart';
+import 'settings_service.dart';
 
 const gradesRefreshTaskName = 'gradesRefreshTask';
 
@@ -23,6 +24,10 @@ void callbackDispatcher() {
         return true;
       }
 
+      // Fresh isolate, so the settings singleton hasn't loaded from disk
+      // yet — needed before fetchGradesDetailed() checks
+      // notificationsEnabled.
+      await SettingsService().load();
       await GradesService().fetchGradesDetailed();
       debugPrint(
         '[BackgroundService] $gradesRefreshTaskName finished at ${DateTime.now()}',
@@ -46,10 +51,27 @@ class BackgroundService {
     await Workmanager().registerPeriodicTask(
       gradesRefreshTaskName,
       gradesRefreshTaskName,
-      frequency: const Duration(minutes: 60),
+      frequency: Duration(
+        minutes: SettingsService().refreshIntervalMinutes.value,
+      ),
       constraints: Constraints(networkType: NetworkType.connected),
       existingWorkPolicy: ExistingWorkPolicy.keep,
     );
+  }
+
+  /// Re-registers the periodic task with a new interval — unlike
+  /// [initialize], this always replaces the existing schedule, since it's
+  /// only called when the user explicitly changes the setting.
+  static Future<void> updateFrequency(Duration frequency) async {
+    await Workmanager().initialize(callbackDispatcher);
+    await Workmanager().registerPeriodicTask(
+      gradesRefreshTaskName,
+      gradesRefreshTaskName,
+      frequency: frequency,
+      constraints: Constraints(networkType: NetworkType.connected),
+      existingWorkPolicy: ExistingWorkPolicy.replace,
+    );
+    _initialized = true;
   }
 
   static Future<void> cancel() async {
