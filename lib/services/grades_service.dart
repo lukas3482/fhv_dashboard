@@ -1,25 +1,126 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:html/parser.dart' as html_parser;
+import 'package:path_provider/path_provider.dart';
 
 import '../models/grade.dart';
 import 'auth_service.dart';
+import 'notification_service.dart';
 
 class GradesService {
   static const _notenUrl = 'https://a5.fhv.at/de/noten.php';
+  static const _cacheFileName = 'grades_cache.json';
 
   static final GradesService _instance = GradesService._internal();
   factory GradesService() => _instance;
   GradesService._internal();
 
-  Future<GradesResult> fetchGrades() async {
-    final response = await AuthService().dio.get(_notenUrl);
+  Future<File> get _cacheFile async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_cacheFileName');
+  }
 
+  Future<GradesResult?> loadCached() async {
+    try {
+      final file = await _cacheFile;
+      if (!await file.exists()) return null;
+      final json = jsonDecode(await file.readAsString());
+      return GradesResult.fromJson(json as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearCache() async {
+    try {
+      final file = await _cacheFile;
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
+  }
+
+  Future<void> _saveCache(GradesResult result) async {
+    try {
+      final file = await _cacheFile;
+      await file.writeAsString(jsonEncode(result.toJson()));
+    } catch (_) {}
+  }
+
+  Future<GradesResult> fetchGrades() async {
+    final (result, _) = await fetchGradesDetailed();
+    return result;
+  }
+
+  Future<(GradesResult, List<GradeChange>)> fetchGradesDetailed() async {
+    final oldCached = await loadCached();
+
+    final response = await AuthService().authenticatedGet(_notenUrl);
     if (response.statusCode != 200) {
       throw Exception(
         'Notenseite konnte nicht geladen werden (${response.statusCode})',
       );
     }
 
-    return _parseHtml(response.data.toString());
+    final result = _parseHtml(response.data.toString());
+    final changes = oldCached == null
+        ? const <GradeChange>[]
+        : _diffGrades(oldCached.grades, result.grades);
+
+    await _saveCache(result);
+    if (changes.isNotEmpty) {
+      try {
+        await NotificationService().showGradeChanges(changes);
+      } catch (_) {}
+    }
+
+    return (result, changes);
+  }
+
+  List<GradeChange> _diffGrades(List<Grade> oldGrades, List<Grade> newGrades) {
+    final oldByModul = {for (final g in oldGrades) g.modul: g};
+    final changes = <GradeChange>[];
+
+    for (final grade in newGrades) {
+      final newNote = _effectiveNote(grade);
+      if (newNote.isEmpty) continue;
+
+      final old = oldByModul[grade.modul];
+      if (old == null) {
+        changes.add(
+          GradeChange(
+            modul: grade.modul,
+            oldNote: null,
+            newNote: newNote,
+            isNew: true,
+          ),
+        );
+        continue;
+      }
+
+      final oldNote = _effectiveNote(old);
+      if (oldNote != newNote) {
+        changes.add(
+          GradeChange(
+            modul: grade.modul,
+            oldNote: oldNote.isEmpty ? null : oldNote,
+            newNote: newNote,
+            isNew: false,
+          ),
+        );
+      }
+    }
+
+    return changes;
+  }
+
+  String _effectiveNote(Grade grade) {
+    if (grade.note.isNotEmpty) return grade.note;
+    if (grade.bewertung.isNotEmpty &&
+        grade.bewertung != '-' &&
+        !grade.bewertung.toLowerCase().contains('folgt')) {
+      return grade.bewertung;
+    }
+    return '';
   }
 
   GradesResult _parseHtml(String html) {

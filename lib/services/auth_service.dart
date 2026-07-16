@@ -4,6 +4,10 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'background_service.dart';
+import 'grades_service.dart';
+import 'profile_service.dart';
+
 class AuthService {
   static const _loginUrl =
       'https://a5.fhv.at/ajax/120/LoginResponsive/LoginHandler';
@@ -120,9 +124,25 @@ class AuthService {
     _isLoggedIn = false;
     await _cookieJar.deleteAll();
     await _storage.deleteAll();
+
+    await GradesService().clearCache();
+    await ProfileService().clearCache();
+    await BackgroundService.cancel();
   }
 
   Dio get dio => _dio;
+
+  Future<Response> authenticatedGet(String url) async {
+    await init();
+    var response = await _dio.get(url);
+    if (response.statusCode != 200 && await hasCredentials()) {
+      final reloggedIn = await autoLogin();
+      if (reloggedIn) {
+        response = await _dio.get(url);
+      }
+    }
+    return response;
+  }
 
   String _mapDioError(DioException e) {
     return switch (e.type) {

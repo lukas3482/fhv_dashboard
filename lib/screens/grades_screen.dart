@@ -11,74 +11,183 @@ class GradesScreen extends StatefulWidget {
 }
 
 class _GradesScreenState extends State<GradesScreen> {
-  late Future<GradesResult> _future;
+  GradesResult? _result;
+  String? _error;
+  bool _isRefreshing = false;
+  List<GradeChange> _changes = [];
 
   @override
   void initState() {
     super.initState();
-    _future = GradesService().fetchGrades();
+    _load();
   }
 
-  void _refresh() => setState(() => _future = GradesService().fetchGrades());
+  Future<void> _load({bool forceRefresh = false}) async {
+    if (!forceRefresh && _result == null) {
+      final cached = await GradesService().loadCached();
+      if (cached != null && mounted) {
+        setState(() => _result = cached);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isRefreshing = true);
+
+    try {
+      final (fresh, changes) = await GradesService().fetchGradesDetailed();
+      if (!mounted) return;
+      setState(() {
+        _result = fresh;
+        _error = null;
+        _isRefreshing = false;
+        if (changes.isNotEmpty) _changes = changes;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isRefreshing = false;
+        if (_result == null) _error = e.toString();
+      });
+      if (_result != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Aktualisierung fehlgeschlagen ($e) – zeige zwischengespeicherte Noten.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _refresh() => _load(forceRefresh: true);
+
+  void _dismissChanges() => setState(() => _changes = []);
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<GradesResult>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (_result == null && _error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(_error!, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _refresh,
+              child: const Text('Erneut versuchen'),
+            ),
+          ],
+        ),
+      );
+    }
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+    final result = _result;
+    if (result == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    Widget body;
+    if (result.grades.isEmpty) {
+      body = const Center(child: Text('Keine Noten gefunden.'));
+    } else {
+      final grouped = _groupBySemester(result.grades);
+      final semesters = _sortedSemesters(grouped);
+
+      final items = <Object>[
+        if (_changes.isNotEmpty) _changes,
+        _SummaryCard(result: result),
+      ];
+      for (final semester in semesters) {
+        items.add(semester);
+        items.addAll(grouped[semester]!);
+      }
+
+      body = ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          if (item is List<GradeChange>) {
+            return _ChangesBanner(changes: item, onDismiss: _dismissChanges);
+          }
+          if (item is _SummaryCard) return item;
+          if (item is String) return _SemesterHeader(semester: item);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _GradeCard(grade: item as Grade),
+          );
+        },
+      );
+    }
+
+    return Column(
+      children: [
+        if (_isRefreshing) const LinearProgressIndicator(minHeight: 2),
+        Expanded(
+          child: RefreshIndicator(onRefresh: _refresh, child: body),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChangesBanner extends StatelessWidget {
+  const _ChangesBanner({required this.changes, required this.onDismiss});
+  final List<GradeChange> changes;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final onColor = colorScheme.onTertiaryContainer;
+
+    return Card(
+      color: colorScheme.tertiaryContainer,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(snapshot.error.toString(), textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _refresh,
-                  child: const Text('Erneut versuchen'),
+                Icon(Icons.notifications_active_outlined, color: onColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    changes.length == 1
+                        ? 'Notenänderung'
+                        : '${changes.length} Notenänderungen',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: onColor,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: onColor, size: 20),
+                  onPressed: onDismiss,
+                  tooltip: 'Ausblenden',
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
-          );
-        }
-
-        final result = snapshot.data!;
-        if (result.grades.isEmpty) {
-          return const Center(child: Text('Keine Noten gefunden.'));
-        }
-
-        final grouped = _groupBySemester(result.grades);
-        final semesters = _sortedSemesters(grouped);
-
-        final items = <Object>[_SummaryCard(result: result)];
-        for (final semester in semesters) {
-          items.add(semester);
-          items.addAll(grouped[semester]!);
-        }
-
-        return RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              if (item is _SummaryCard) return item;
-              if (item is String) return _SemesterHeader(semester: item);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _GradeCard(grade: item as Grade),
-              );
-            },
-          ),
-        );
-      },
+            for (final change in changes)
+              Padding(
+                padding: const EdgeInsets.only(left: 32, top: 2),
+                child: Text(
+                  change.isNew || change.oldNote == null
+                      ? '${change.modul}: ${change.newNote}'
+                      : '${change.modul}: ${change.oldNote} → ${change.newNote}',
+                  style: TextStyle(color: onColor),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
