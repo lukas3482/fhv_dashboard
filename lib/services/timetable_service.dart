@@ -4,24 +4,31 @@ import 'auth_service.dart';
 class TimetableService {
   static const _url =
       'https://a5.fhv.at/ajax/122/EventPlanerSite/EventDateSiteJsonPage';
+  static const _resetSelectionUrl =
+      'https://a5.fhv.at/ajax/122/EventPlanerSite/SessionSaveJsonPage';
 
   static final TimetableService _instance = TimetableService._internal();
   factory TimetableService() => _instance;
   TimetableService._internal();
 
   Future<Map<DateTime, List<TimetableEvent>>> fetchWeek(DateTime monday) async {
+    await _ensurePersonalSchedule();
     final sunday = monday.add(const Duration(days: 6));
     return _fetchRange(monday, sunday);
+  }
+
+  Future<void> _ensurePersonalSchedule() async {
+    await AuthService().authenticatedGet('$_resetSelectionUrl?roomIds=');
   }
 
   Future<Map<DateTime, List<TimetableEvent>>> _fetchRange(
     DateTime from,
     DateTime to,
   ) async {
-    final response = await AuthService().dio.get(
+    final uri = Uri.parse(
       _url,
-      queryParameters: {'from': _fmt(from), 'to': _fmt(to)},
-    );
+    ).replace(queryParameters: {'from': _fmt(from), 'to': _fmt(to)});
+    final response = await AuthService().authenticatedGet(uri.toString());
 
     if (response.statusCode == 302) throw Exception('Session abgelaufen.');
     if (response.statusCode != 200) {
@@ -68,6 +75,8 @@ class TimetableService {
   }
 
   Future<TimetableEvent?> fetchNextEvent() async {
+    await _ensurePersonalSchedule();
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
