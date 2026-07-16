@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/dashboard_card.dart';
 import '../models/grade.dart';
 import '../models/profile_info.dart';
 import '../models/timetable_event.dart';
@@ -100,68 +101,95 @@ class _StartScreenState extends State<StartScreen> {
     await _load(forceRefresh: true);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    Widget profileSection;
+  Widget _buildNextEventCard() {
+    return FutureBuilder<TimetableEvent?>(
+      future: _nextEventFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done ||
+            snapshot.hasError ||
+            snapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+        return _NextEventCard(event: snapshot.data!);
+      },
+    );
+  }
+
+  Widget _buildEctsCard() {
+    return FutureBuilder<GradesResult?>(
+      future: _gradesFuture,
+      builder: (context, snapshot) {
+        final result = snapshot.data;
+        if (result == null) return const SizedBox.shrink();
+        return _EctsProgressCard(result: result);
+      },
+    );
+  }
+
+  Widget _buildProfileCard() {
     if (_profile == null && _error != null) {
-      profileSection = _ErrorCard(message: _error!, onRetry: _refresh);
-    } else if (_profile == null) {
-      profileSection = const Padding(
+      return _ErrorCard(message: _error!, onRetry: _refresh);
+    }
+    if (_profile == null) {
+      return const Padding(
         padding: EdgeInsets.symmetric(vertical: 32),
         child: Center(child: CircularProgressIndicator()),
       );
-    } else {
-      profileSection = _ProfileCard(profile: _profile!);
     }
+    return _ProfileCard(profile: _profile!);
+  }
 
+  Widget _buildPlatformsCard(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'FHV-Links',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const _PlatformLinksCard(),
+      ],
+    );
+  }
+
+  Widget _buildCard(BuildContext context, DashboardCardType type) {
+    switch (type) {
+      case DashboardCardType.nextEvent:
+        return _buildNextEventCard();
+      case DashboardCardType.ectsProgress:
+        return _buildEctsCard();
+      case DashboardCardType.profile:
+        return _buildProfileCard();
+      case DashboardCardType.platforms:
+        return _buildPlatformsCard(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
         if (_isRefreshing) const LinearProgressIndicator(minHeight: 2),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _refresh,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-              children: [
-                FutureBuilder<TimetableEvent?>(
-                  future: _nextEventFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done ||
-                        snapshot.hasError ||
-                        snapshot.data == null) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _NextEventCard(event: snapshot.data!),
-                    );
-                  },
-                ),
-                FutureBuilder<GradesResult?>(
-                  future: _gradesFuture,
-                  builder: (context, snapshot) {
-                    final result = snapshot.data;
-                    if (result == null) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _EctsProgressCard(result: result),
-                    );
-                  },
-                ),
-                profileSection,
-                const SizedBox(height: 16),
-                Text(
-                  'FHV-Links',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const _PlatformLinksCard(),
-              ],
+            child: ValueListenableBuilder<List<DashboardCardConfig>>(
+              valueListenable: SettingsService().dashboardCards,
+              builder: (context, cards, _) {
+                final visible = cards.where((c) => c.visible).toList();
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  itemCount: visible.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 16),
+                  itemBuilder: (context, i) =>
+                      _buildCard(context, visible[i].type),
+                );
+              },
             ),
           ),
         ),

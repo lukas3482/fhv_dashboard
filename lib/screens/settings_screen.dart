@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/background_service.dart';
 import '../services/settings_service.dart';
+import 'dashboard_customize_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -53,6 +54,21 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Einstellungen')),
       body: ListView(
         children: [
+          const _SectionHeader('Startseite'),
+          ListTile(
+            title: const Text('Dashboard anpassen'),
+            subtitle: const Text(
+              'Karten auf der Startseite ein-/ausblenden und sortieren.',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DashboardCustomizeScreen(),
+              ),
+            ),
+          ),
+          const Divider(height: 1),
           const _SectionHeader('Darstellung'),
           ValueListenableBuilder<ThemeMode>(
             valueListenable: settings.themeMode,

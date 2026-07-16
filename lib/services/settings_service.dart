@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/dashboard_card.dart';
+
 class SettingsService {
   static const _themeModeKey = 'settings_theme_mode';
   static const _notificationsEnabledKey = 'settings_notifications_enabled';
   static const _refreshIntervalKey = 'settings_refresh_interval_minutes';
   static const _targetEctsKey = 'settings_target_ects';
+  static const _dashboardCardsKey = 'settings_dashboard_cards';
 
   static const defaultRefreshIntervalMinutes = 30;
   static const defaultTargetEcts = 180;
+  static const defaultDashboardCards = [
+    DashboardCardType.nextEvent,
+    DashboardCardType.ectsProgress,
+    DashboardCardType.profile,
+    DashboardCardType.platforms,
+  ];
 
   static final SettingsService _instance = SettingsService._internal();
   factory SettingsService() => _instance;
@@ -20,6 +29,10 @@ class SettingsService {
     defaultRefreshIntervalMinutes,
   );
   final targetEcts = ValueNotifier<int>(defaultTargetEcts);
+  final dashboardCards = ValueNotifier<List<DashboardCardConfig>>([
+    for (final type in defaultDashboardCards)
+      DashboardCardConfig(type: type, visible: true),
+  ]);
 
   SharedPreferences? _prefs;
   bool _loaded = false;
@@ -42,6 +55,11 @@ class SettingsService {
     refreshIntervalMinutes.value =
         prefs.getInt(_refreshIntervalKey) ?? defaultRefreshIntervalMinutes;
     targetEcts.value = prefs.getInt(_targetEctsKey) ?? defaultTargetEcts;
+
+    final storedCards = prefs.getStringList(_dashboardCardsKey);
+    if (storedCards != null) {
+      dashboardCards.value = _decodeDashboardCards(storedCards);
+    }
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -62,5 +80,41 @@ class SettingsService {
   Future<void> setTargetEcts(int ects) async {
     targetEcts.value = ects;
     await _prefs?.setInt(_targetEctsKey, ects);
+  }
+
+  Future<void> setDashboardCards(List<DashboardCardConfig> cards) async {
+    dashboardCards.value = cards;
+    await _prefs?.setStringList(
+      _dashboardCardsKey,
+      _encodeDashboardCards(cards),
+    );
+  }
+
+  List<String> _encodeDashboardCards(List<DashboardCardConfig> cards) =>
+      cards.map((c) => '${c.type.name}:${c.visible ? '1' : '0'}').toList();
+
+  List<DashboardCardConfig> _decodeDashboardCards(List<String> raw) {
+    final result = <DashboardCardConfig>[];
+    final seen = <DashboardCardType>{};
+
+    for (final entry in raw) {
+      final parts = entry.split(':');
+      if (parts.length != 2) continue;
+      try {
+        final type = DashboardCardType.values.byName(parts[0]);
+        result.add(DashboardCardConfig(type: type, visible: parts[1] == '1'));
+        seen.add(type);
+      } catch (_) {
+        // Unknown card id —> skip.
+      }
+    }
+
+    for (final type in DashboardCardType.values) {
+      if (!seen.contains(type)) {
+        result.add(DashboardCardConfig(type: type, visible: true));
+      }
+    }
+
+    return result;
   }
 }
