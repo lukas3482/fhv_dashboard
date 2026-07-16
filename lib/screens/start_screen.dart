@@ -12,53 +12,94 @@ class StartScreen extends StatefulWidget {
 }
 
 class _StartScreenState extends State<StartScreen> {
-  late Future<ProfileInfo> _future;
+  ProfileInfo? _profile;
+  String? _error;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
-    _future = ProfileService().fetchProfile();
+    _load();
   }
 
-  void _refresh() => setState(() => _future = ProfileService().fetchProfile());
+  Future<void> _load({bool forceRefresh = false}) async {
+    if (!forceRefresh && _profile == null) {
+      final cached = await ProfileService().loadCached();
+      if (cached != null && mounted) {
+        setState(() => _profile = cached);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isRefreshing = true);
+
+    try {
+      final fresh = await ProfileService().fetchProfile();
+      if (!mounted) return;
+      setState(() {
+        _profile = fresh;
+        _error = null;
+        _isRefreshing = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isRefreshing = false;
+        if (_profile == null) _error = e.toString();
+      });
+      if (_profile != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Aktualisierung fehlgeschlagen – zeige zwischengespeichertes Profil.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _refresh() => _load(forceRefresh: true);
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () async => _refresh(),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        children: [
-          FutureBuilder<ProfileInfo>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snapshot.hasError) {
-                return _ErrorCard(
-                  message: snapshot.error.toString(),
-                  onRetry: _refresh,
-                );
-              }
-              return _ProfileCard(profile: snapshot.data!);
-            },
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'FHV-Plattformen',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
+    Widget profileSection;
+    if (_profile == null && _error != null) {
+      profileSection = _ErrorCard(message: _error!, onRetry: _refresh);
+    } else if (_profile == null) {
+      profileSection = const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    } else {
+      profileSection = _ProfileCard(profile: _profile!);
+    }
+
+    return Column(
+      children: [
+        if (_isRefreshing) const LinearProgressIndicator(minHeight: 2),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              children: [
+                profileSection,
+                const SizedBox(height: 16),
+                Text(
+                  'FHV-Plattformen',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const _PlatformLinksCard(),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          const _PlatformLinksCard(),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

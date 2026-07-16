@@ -1,15 +1,50 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
+import 'package:path_provider/path_provider.dart';
 
 import '../models/profile_info.dart';
 import 'auth_service.dart';
 
 class ProfileService {
   static const _profileUrl = 'https://a5.fhv.at/de/profile.php';
+  static const _cacheFileName = 'profile_cache.json';
 
   static final ProfileService _instance = ProfileService._internal();
   factory ProfileService() => _instance;
   ProfileService._internal();
+
+  Future<File> get _cacheFile async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_cacheFileName');
+  }
+
+  Future<ProfileInfo?> loadCached() async {
+    try {
+      final file = await _cacheFile;
+      if (!await file.exists()) return null;
+      final json = jsonDecode(await file.readAsString());
+      return ProfileInfo.fromJson(json as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearCache() async {
+    try {
+      final file = await _cacheFile;
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
+  }
+
+  Future<void> _saveCache(ProfileInfo profile) async {
+    try {
+      final file = await _cacheFile;
+      await file.writeAsString(jsonEncode(profile.toJson()));
+    } catch (_) {}
+  }
 
   Future<ProfileInfo> fetchProfile() async {
     final response = await AuthService().dio.get(_profileUrl);
@@ -20,7 +55,9 @@ class ProfileService {
       );
     }
 
-    return _parseHtml(response.data.toString());
+    final profile = _parseHtml(response.data.toString());
+    await _saveCache(profile);
+    return profile;
   }
 
   ProfileInfo _parseHtml(String html) {

@@ -4,6 +4,9 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'grades_service.dart';
+import 'profile_service.dart';
+
 class AuthService {
   static const _loginUrl =
       'https://a5.fhv.at/ajax/120/LoginResponsive/LoginHandler';
@@ -120,6 +123,9 @@ class AuthService {
     _isLoggedIn = false;
     await _cookieJar.deleteAll();
     await _storage.deleteAll();
+
+    await GradesService().clearCache();
+    await ProfileService().clearCache();
   }
 
   Dio get dio => _dio;

@@ -11,74 +11,115 @@ class GradesScreen extends StatefulWidget {
 }
 
 class _GradesScreenState extends State<GradesScreen> {
-  late Future<GradesResult> _future;
+  GradesResult? _result;
+  String? _error;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
-    _future = GradesService().fetchGrades();
+    _load();
   }
 
-  void _refresh() => setState(() => _future = GradesService().fetchGrades());
+  Future<void> _load({bool forceRefresh = false}) async {
+    if (!forceRefresh && _result == null) {
+      final cached = await GradesService().loadCached();
+      if (cached != null && mounted) {
+        setState(() => _result = cached);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isRefreshing = true);
+
+    try {
+      final fresh = await GradesService().fetchGrades();
+      if (!mounted) return;
+      setState(() {
+        _result = fresh;
+        _error = null;
+        _isRefreshing = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isRefreshing = false;
+        if (_result == null) _error = e.toString();
+      });
+      if (_result != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Aktualisierung fehlgeschlagen – zeige zwischengespeicherte Noten.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _refresh() => _load(forceRefresh: true);
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<GradesResult>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(snapshot.error.toString(), textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _refresh,
-                  child: const Text('Erneut versuchen'),
-                ),
-              ],
+    if (_result == null && _error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(_error!, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _refresh,
+              child: const Text('Erneut versuchen'),
             ),
+          ],
+        ),
+      );
+    }
+
+    final result = _result;
+    if (result == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    Widget body;
+    if (result.grades.isEmpty) {
+      body = const Center(child: Text('Keine Noten gefunden.'));
+    } else {
+      final grouped = _groupBySemester(result.grades);
+      final semesters = _sortedSemesters(grouped);
+
+      final items = <Object>[_SummaryCard(result: result)];
+      for (final semester in semesters) {
+        items.add(semester);
+        items.addAll(grouped[semester]!);
+      }
+
+      body = ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          if (item is _SummaryCard) return item;
+          if (item is String) return _SemesterHeader(semester: item);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _GradeCard(grade: item as Grade),
           );
-        }
+        },
+      );
+    }
 
-        final result = snapshot.data!;
-        if (result.grades.isEmpty) {
-          return const Center(child: Text('Keine Noten gefunden.'));
-        }
-
-        final grouped = _groupBySemester(result.grades);
-        final semesters = _sortedSemesters(grouped);
-
-        final items = <Object>[_SummaryCard(result: result)];
-        for (final semester in semesters) {
-          items.add(semester);
-          items.addAll(grouped[semester]!);
-        }
-
-        return RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              if (item is _SummaryCard) return item;
-              if (item is String) return _SemesterHeader(semester: item);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _GradeCard(grade: item as Grade),
-              );
-            },
-          ),
-        );
-      },
+    return Column(
+      children: [
+        if (_isRefreshing) const LinearProgressIndicator(minHeight: 2),
+        Expanded(
+          child: RefreshIndicator(onRefresh: _refresh, child: body),
+        ),
+      ],
     );
   }
 }

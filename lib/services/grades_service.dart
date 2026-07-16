@@ -1,14 +1,49 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:html/parser.dart' as html_parser;
+import 'package:path_provider/path_provider.dart';
 
 import '../models/grade.dart';
 import 'auth_service.dart';
 
 class GradesService {
   static const _notenUrl = 'https://a5.fhv.at/de/noten.php';
+  static const _cacheFileName = 'grades_cache.json';
 
   static final GradesService _instance = GradesService._internal();
   factory GradesService() => _instance;
   GradesService._internal();
+
+  Future<File> get _cacheFile async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_cacheFileName');
+  }
+
+  Future<GradesResult?> loadCached() async {
+    try {
+      final file = await _cacheFile;
+      if (!await file.exists()) return null;
+      final json = jsonDecode(await file.readAsString());
+      return GradesResult.fromJson(json as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearCache() async {
+    try {
+      final file = await _cacheFile;
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
+  }
+
+  Future<void> _saveCache(GradesResult result) async {
+    try {
+      final file = await _cacheFile;
+      await file.writeAsString(jsonEncode(result.toJson()));
+    } catch (_) {}
+  }
 
   Future<GradesResult> fetchGrades() async {
     final response = await AuthService().dio.get(_notenUrl);
@@ -19,7 +54,9 @@ class GradesService {
       );
     }
 
-    return _parseHtml(response.data.toString());
+    final result = _parseHtml(response.data.toString());
+    await _saveCache(result);
+    return result;
   }
 
   GradesResult _parseHtml(String html) {
