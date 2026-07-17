@@ -1,17 +1,21 @@
-# fhv_dashboard
+# FHV Dashboard
 
-A new Flutter project.
+Inoffizielle Flutter-App für Studierende der Fachhochschule Vorarlberg. Bündelt die wichtigsten FHV-Onlinedienste (Stundenplan, Noten, Prüfungstermine, Raumsuche) in einer schnellen, übersichtlichen Oberfläche.
 
-## Getting Started
+> Diese App steht in keiner Verbindung zur FHV und wird unabhängig entwickelt. Es werden keinerlei Daten serverseitig gespeichert – Zugangsdaten und alle abgerufenen Inhalte verbleiben ausschließlich lokal auf dem Gerät.
 
-This project is a starting point for a Flutter application.
+## Features
 
-A few resources to get you started if this is your first Flutter project:
+- **Start** – Profilübersicht, nächster anstehender Termin, Studienfortschritt (ECTS) und Schnellzugriff auf FHV-Plattformen (Ilias, Outlook, Inside FHV, ...)
+- **Stundenplan** – Listen- und Wochenraster-Ansicht, wochenweise navigierbar
+- **Prüfungstermine** – bevorstehende Prüfungen
+- **Noten** – Übersicht nach Semester, Notenschnitt & ECTS-Fortschritt, Benachrichtigung bei neuen/geänderten Noten
+- **Raumsuche** – freie Räume für einen gewünschten Zeitraum finden oder den Belegungsplan eines bestimmten Raums einsehen
+- **Anpassbares Dashboard** – Start-Karten nach Wunsch ein-/ausblenden
+- **Offline-freundlich** – Noten, Stundenplan und nächster Termin werden lokal zwischengespeichert, beim Start sofort angezeigt und im Hintergrund aktualisiert
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Technisch
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Flutter (Material 3), unterstützt Android, iOS
+- Ruft FHV-interne Webseiten (a5.fhv.at) über eine authentifizierte Session ab und parst die Inhalte clientseitig
+- iOS wurde bisher nicht getestet
