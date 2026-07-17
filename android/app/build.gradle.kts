@@ -32,6 +32,11 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // R8 minification strips the reflectively-invoked no-arg constructor of
+            // androidx.work's Room-generated WorkDatabase_Impl (no keep rules configured
+            // for it), causing a NoSuchMethodException crash on startup.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

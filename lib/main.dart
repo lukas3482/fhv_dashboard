@@ -14,6 +14,10 @@ class FhvDashboardApp extends StatelessWidget {
 
   static const _seedColor = Color(0xFF2E7D32);
 
+  static final _navigationBarTheme = NavigationBarThemeData(
+    labelTextStyle: WidgetStateProperty.all(const TextStyle(fontSize: 11)),
+  );
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
@@ -24,6 +28,7 @@ class FhvDashboardApp extends StatelessWidget {
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: _seedColor),
             useMaterial3: true,
+            navigationBarTheme: _navigationBarTheme,
           ),
           darkTheme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
@@ -31,6 +36,7 @@ class FhvDashboardApp extends StatelessWidget {
               brightness: Brightness.dark,
             ),
             useMaterial3: true,
+            navigationBarTheme: _navigationBarTheme,
           ),
           themeMode: mode,
           home: const SplashScreen(),
