@@ -16,7 +16,11 @@ class StundenplanScreen extends StatefulWidget {
 
 class _StundenplanScreenState extends State<StundenplanScreen> {
   late DateTime _start;
-  late Future<Map<DateTime, List<TimetableEvent>>> _future;
+  Map<DateTime, List<TimetableEvent>>? _grouped;
+  String? _error;
+  bool _isRefreshing = false;
+
+  int _loadToken = 0;
 
   static DateTime get _today {
     final now = DateTime.now();
@@ -38,17 +42,57 @@ class _StundenplanScreenState extends State<StundenplanScreen> {
     _load();
   }
 
-  void _load() {
-    setState(() {
-      _future = TimetableService().fetchWeek(_start);
-    });
+  Future<void> _load({bool forceRefresh = false}) async {
+    final token = ++_loadToken;
+    final requestedStart = _start;
+
+    if (!forceRefresh) {
+      setState(() {
+        _grouped = null;
+        _error = null;
+      });
+
+      final cached = await TimetableService().loadCachedWeek(requestedStart);
+      if (!mounted || token != _loadToken) return;
+      if (cached != null) {
+        setState(() => _grouped = cached);
+      }
+    }
+
+    if (!mounted || token != _loadToken) return;
+    setState(() => _isRefreshing = true);
+
+    try {
+      final fresh = await TimetableService().fetchWeek(requestedStart);
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _grouped = fresh;
+        _error = null;
+        _isRefreshing = false;
+      });
+    } catch (e) {
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _isRefreshing = false;
+        if (_grouped == null) _error = e.toString();
+      });
+      if (_grouped != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Aktualisierung fehlgeschlagen ($e) – zeige zwischengespeicherten Stundenplan.',
+            ),
+          ),
+        );
+      }
+    }
   }
+
+  Future<void> _refresh() => _load(forceRefresh: true);
 
   void _shift(int delta) {
     final mode = SettingsService().stundenplanViewMode.value;
     if (mode == StundenplanViewMode.list && _start == _today) {
-      // Leaving the rolling "today .. +6 days" window — from here on,
-      // navigate whole Mon–Sun calendar weeks instead.
       final mondayThisWeek = _today.subtract(
         Duration(days: _today.weekday - 1),
       );
@@ -65,11 +109,6 @@ class _StundenplanScreenState extends State<StundenplanScreen> {
   }
 
   void _onViewModeChanged(StundenplanViewMode mode) {
-    // Only re-anchor when the mode being left was showing "today" in its
-    // own sense (rolling window for list, this week's Monday for grid) —
-    // that's the one case where the two modes disagree on what "today"
-    // means. Otherwise a navigated-to week is already Monday-aligned in
-    // both modes, so _start carries over unchanged.
     if (_isTodayFor(SettingsService().stundenplanViewMode.value)) {
       _start = _anchorFor(mode);
     }
@@ -98,75 +137,71 @@ class _StundenplanScreenState extends State<StundenplanScreen> {
               onToday: _goToToday,
               onViewModeChanged: _onViewModeChanged,
             ),
-            Expanded(
-              child: FutureBuilder<Map<DateTime, List<TimetableEvent>>>(
-                future: _future,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 48,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            snapshot.error.toString(),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          FilledButton(
-                            onPressed: _load,
-                            child: const Text('Erneut versuchen'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final grouped = snapshot.data!;
-                  if (grouped.isEmpty) {
-                    return const Center(
-                      child: Text('Keine Veranstaltungen diese Woche.'),
-                    );
-                  }
-
-                  if (viewMode == StundenplanViewMode.grid) {
-                    return RefreshIndicator(
-                      onRefresh: () async => _load(),
-                      child: CalendarGridView(start: _start, grouped: grouped),
-                    );
-                  }
-
-                  final days = grouped.keys.toList()..sort();
-
-                  return RefreshIndicator(
-                    onRefresh: () async => _load(),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      itemCount: days.length,
-                      itemBuilder: (context, i) {
-                        final day = days[i];
-                        final events = grouped[day]!;
-                        return DaySection(day: day, events: events);
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
+            if (_isRefreshing) const LinearProgressIndicator(minHeight: 2),
+            Expanded(child: _buildBody(viewMode)),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildBody(StundenplanViewMode viewMode) {
+    final grouped = _grouped;
+
+    if (grouped == null && _error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(_error!, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _load,
+              child: const Text('Erneut versuchen'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (grouped == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (grouped.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          children: const [
+            SizedBox(height: 120),
+            Center(child: Text('Keine Veranstaltungen diese Woche.')),
+          ],
+        ),
+      );
+    }
+
+    if (viewMode == StundenplanViewMode.grid) {
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: CalendarGridView(start: _start, grouped: grouped),
+      );
+    }
+
+    final days = grouped.keys.toList()..sort();
+
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: days.length,
+        itemBuilder: (context, i) {
+          final day = days[i];
+          final events = grouped[day]!;
+          return DaySection(day: day, events: events);
+        },
+      ),
     );
   }
 }

@@ -25,7 +25,8 @@ class _StartScreenState extends State<StartScreen> {
   ProfileInfo? _profile;
   String? _error;
   bool _isRefreshing = false;
-  Future<TimetableEvent?>? _nextEventFuture;
+  TimetableEvent? _nextEvent;
+  bool _nextEventChecked = false;
   Future<GradesResult?>? _gradesFuture;
 
   @override
@@ -36,10 +37,28 @@ class _StartScreenState extends State<StartScreen> {
     _loadGrades();
   }
 
-  void _loadNextEvent() {
-    setState(() {
-      _nextEventFuture = TimetableService().fetchNextEvent();
-    });
+  Future<void> _loadNextEvent({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await TimetableService().loadCachedNextEvent();
+      if (cached != null && mounted) {
+        setState(() {
+          _nextEvent = cached;
+          _nextEventChecked = true;
+        });
+      }
+    }
+
+    try {
+      final fresh = await TimetableService().fetchNextEvent();
+      if (!mounted) return;
+      setState(() {
+        _nextEvent = fresh;
+        _nextEventChecked = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _nextEventChecked = true);
+    }
   }
 
   void _loadGrades({bool forceRefresh = false}) {
@@ -100,23 +119,15 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   Future<void> _refresh() async {
-    _loadNextEvent();
+    _loadNextEvent(forceRefresh: true);
     _loadGrades(forceRefresh: true);
     await _load(forceRefresh: true);
   }
 
   Widget _buildNextEventCard() {
-    return FutureBuilder<TimetableEvent?>(
-      future: _nextEventFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done ||
-            snapshot.hasError ||
-            snapshot.data == null) {
-          return const SizedBox.shrink();
-        }
-        return NextEventCard(event: snapshot.data!);
-      },
-    );
+    final event = _nextEvent;
+    if (!_nextEventChecked || event == null) return const SizedBox.shrink();
+    return NextEventCard(event: event);
   }
 
   Widget _buildEctsCard() {
@@ -124,7 +135,7 @@ class _StartScreenState extends State<StartScreen> {
       future: _gradesFuture,
       builder: (context, snapshot) {
         final result = snapshot.data;
-        if (result == null) return const SizedBox.shrink();
+        if (result == null) return SizedBox.shrink();
         return EctsProgressCard(result: result);
       },
     );

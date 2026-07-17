@@ -68,4 +68,39 @@ class TimetableEvent {
     } catch (_) {}
     return fallback;
   }
+
+  Map<String, dynamic> toCacheJson() => {
+    'id': id,
+    'eventName': eventName,
+    'startDate': startDate.toIso8601String(),
+    'endDate': endDate.toIso8601String(),
+    'rooms': rooms,
+    'buildings': buildings,
+    'occasion': occasion,
+    'examParts': examParts,
+    'lecturers': lecturers,
+    'color': color.toARGB32(),
+    'textColor': textColor.toARGB32(),
+    'fullDay': fullDay,
+    'comment': comment,
+    'isHoliday': isHoliday,
+  };
+
+  factory TimetableEvent.fromCacheJson(Map<String, dynamic> json) =>
+      TimetableEvent(
+        id: json['id'] as String,
+        eventName: json['eventName'] as String,
+        startDate: DateTime.parse(json['startDate'] as String),
+        endDate: DateTime.parse(json['endDate'] as String),
+        rooms: json['rooms'] as String,
+        buildings: json['buildings'] as String,
+        occasion: json['occasion'] as String,
+        examParts: (json['examParts'] as List).cast<String>(),
+        lecturers: json['lecturers'] as String,
+        color: Color(json['color'] as int),
+        textColor: Color(json['textColor'] as int),
+        fullDay: json['fullDay'] as bool,
+        comment: json['comment'] as String,
+        isHoliday: json['isHoliday'] as bool,
+      );
 }

@@ -1,3 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:path_provider/path_provider.dart';
+
 import '../models/timetable_event.dart';
 import 'auth_service.dart';
 
@@ -6,15 +11,95 @@ class TimetableService {
       'https://a5.fhv.at/ajax/122/EventPlanerSite/EventDateSiteJsonPage';
   static const _resetSelectionUrl =
       'https://a5.fhv.at/ajax/122/EventPlanerSite/SessionSaveJsonPage';
+  static const _cacheFileName = 'timetable_cache.json';
+  static const _nextEventCacheFileName = 'next_event_cache.json';
+  static const _maxCachedWeeks = 8;
 
   static final TimetableService _instance = TimetableService._internal();
   factory TimetableService() => _instance;
   TimetableService._internal();
 
+  Future<File> get _cacheFile async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_cacheFileName');
+  }
+
+  Future<File> get _nextEventCacheFile async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/$_nextEventCacheFileName');
+  }
+
+  Future<TimetableEvent?> loadCachedNextEvent() async {
+    try {
+      final file = await _nextEventCacheFile;
+      if (!await file.exists()) return null;
+      final json = jsonDecode(await file.readAsString());
+      if (json == null) return null;
+      return TimetableEvent.fromCacheJson(json as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveNextEventCache(TimetableEvent? event) async {
+    try {
+      final file = await _nextEventCacheFile;
+      await file.writeAsString(jsonEncode(event?.toCacheJson()));
+    } catch (_) {}
+  }
+
+  Future<Map<DateTime, List<TimetableEvent>>?> loadCachedWeek(
+    DateTime monday,
+  ) async {
+    try {
+      final file = await _cacheFile;
+      if (!await file.exists()) return null;
+      final all = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      final list = all[_fmt(monday)] as List?;
+      if (list == null) return null;
+      final events = list
+          .cast<Map<String, dynamic>>()
+          .map(TimetableEvent.fromCacheJson)
+          .toList();
+      return _groupByDay(events);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveCacheWeek(
+    DateTime monday,
+    Map<DateTime, List<TimetableEvent>> grouped,
+  ) async {
+    try {
+      final file = await _cacheFile;
+      var all = <String, dynamic>{};
+      if (await file.exists()) {
+        try {
+          all = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+        } catch (_) {}
+      }
+
+      final events = grouped.values.expand((e) => e).toList();
+      all[_fmt(monday)] = events.map((e) => e.toCacheJson()).toList();
+
+      if (all.length > _maxCachedWeeks) {
+        final oldestFirst = all.keys.toList()..sort();
+        for (final key in oldestFirst.take(all.length - _maxCachedWeeks)) {
+          all.remove(key);
+        }
+      }
+
+      await file.writeAsString(jsonEncode(all));
+    } catch (_) {}
+  }
+
   Future<Map<DateTime, List<TimetableEvent>>> fetchWeek(DateTime monday) async {
     await _ensurePersonalSchedule();
     final sunday = monday.add(const Duration(days: 6));
-    return _fetchRange(monday, sunday);
+    final result = await _fetchRange(monday, sunday);
+    await _saveCacheWeek(monday, result);
+    return result;
   }
 
   Future<void> _ensurePersonalSchedule() async {
@@ -87,10 +172,14 @@ class TimetableService {
       final searchEnd = searchStart.add(Duration(days: windowDays));
       final events = await _fetchRange(searchStart, searchEnd);
       final upcoming = _firstUpcoming(events, now);
-      if (upcoming != null) return upcoming;
+      if (upcoming != null) {
+        await _saveNextEventCache(upcoming);
+        return upcoming;
+      }
       searchStart = searchEnd.add(const Duration(days: 1));
     }
 
+    await _saveNextEventCache(null);
     return null;
   }
 
