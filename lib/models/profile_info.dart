@@ -11,20 +11,19 @@ class ProfileContact {
     required this.isPrimary,
   });
 
-  factory ProfileContact.fromJson(Map<String, dynamic> json) =>
-      ProfileContact(
-        type: json['type'] as String,
-        label: json['label'] as String,
-        value: json['value'] as String,
-        isPrimary: json['isPrimary'] as bool,
-      );
+  factory ProfileContact.fromJson(Map<String, dynamic> json) => ProfileContact(
+    type: json['type'] as String,
+    label: json['label'] as String,
+    value: json['value'] as String,
+    isPrimary: json['isPrimary'] as bool,
+  );
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'label': label,
-        'value': value,
-        'isPrimary': isPrimary,
-      };
+    'type': type,
+    'label': label,
+    'value': value,
+    'isPrimary': isPrimary,
+  };
 }
 
 class ProfileInfo {
@@ -43,20 +42,20 @@ class ProfileInfo {
   });
 
   factory ProfileInfo.fromJson(Map<String, dynamic> json) => ProfileInfo(
-        name: json['name'] as String,
-        affiliation: json['affiliation'] as String,
-        matriculationNumber: json['matriculationNumber'] as String,
-        personKey: json['personKey'] as String,
-        contacts: (json['contacts'] as List)
-            .map((e) => ProfileContact.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    name: json['name'] as String,
+    affiliation: json['affiliation'] as String,
+    matriculationNumber: json['matriculationNumber'] as String,
+    personKey: json['personKey'] as String,
+    contacts: (json['contacts'] as List)
+        .map((e) => ProfileContact.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'affiliation': affiliation,
-        'matriculationNumber': matriculationNumber,
-        'personKey': personKey,
-        'contacts': contacts.map((c) => c.toJson()).toList(),
-      };
+    'name': name,
+    'affiliation': affiliation,
+    'matriculationNumber': matriculationNumber,
+    'personKey': personKey,
+    'contacts': contacts.map((c) => c.toJson()).toList(),
+  };
 }
