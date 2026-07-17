@@ -1,0 +1,41 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Flutter
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # This is a Flutter app, not a plain Dart package, so it needs the
+      # Flutter SDK (which bundles a matching Dart SDK) rather than
+      # dart-lang/setup-dart.
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Uncomment this step to verify the use of 'dart format' on each commit.
+      # - name: Verify formatting
+      #   run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze project source
+        run: flutter analyze
+
+      # No tests exist in test/ yet, so there's nothing for `flutter test`
+      # to run. Add tests and re-enable this step once there are some.
+      # - name: Run tests
+      #   run: flutter test
