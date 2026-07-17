@@ -55,7 +55,7 @@ class BackgroundService {
         minutes: SettingsService().refreshIntervalMinutes.value,
       ),
       constraints: Constraints(networkType: NetworkType.connected),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
     );
   }
 
@@ -69,7 +69,7 @@ class BackgroundService {
       gradesRefreshTaskName,
       frequency: frequency,
       constraints: Constraints(networkType: NetworkType.connected),
-      existingWorkPolicy: ExistingWorkPolicy.replace,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     );
     _initialized = true;
   }
