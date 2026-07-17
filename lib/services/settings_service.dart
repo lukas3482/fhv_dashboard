@@ -3,12 +3,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/dashboard_card.dart';
 
+enum StundenplanViewMode { list, grid }
+
 class SettingsService {
   static const _themeModeKey = 'settings_theme_mode';
   static const _notificationsEnabledKey = 'settings_notifications_enabled';
   static const _refreshIntervalKey = 'settings_refresh_interval_minutes';
   static const _targetEctsKey = 'settings_target_ects';
   static const _dashboardCardsKey = 'settings_dashboard_cards';
+  static const _stundenplanViewModeKey = 'settings_stundenplan_view_mode';
 
   static const defaultRefreshIntervalMinutes = 30;
   static const defaultTargetEcts = 180;
@@ -33,6 +36,9 @@ class SettingsService {
     for (final type in defaultDashboardCards)
       DashboardCardConfig(type: type, visible: true),
   ]);
+  final stundenplanViewMode = ValueNotifier<StundenplanViewMode>(
+    StundenplanViewMode.list,
+  );
 
   SharedPreferences? _prefs;
   bool _loaded = false;
@@ -60,6 +66,12 @@ class SettingsService {
     if (storedCards != null) {
       dashboardCards.value = _decodeDashboardCards(storedCards);
     }
+
+    final storedViewMode = prefs.getString(_stundenplanViewModeKey);
+    stundenplanViewMode.value = StundenplanViewMode.values.firstWhere(
+      (m) => m.name == storedViewMode,
+      orElse: () => StundenplanViewMode.list,
+    );
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -88,6 +100,11 @@ class SettingsService {
       _dashboardCardsKey,
       _encodeDashboardCards(cards),
     );
+  }
+
+  Future<void> setStundenplanViewMode(StundenplanViewMode mode) async {
+    stundenplanViewMode.value = mode;
+    await _prefs?.setString(_stundenplanViewModeKey, mode.name);
   }
 
   List<String> _encodeDashboardCards(List<DashboardCardConfig> cards) =>
