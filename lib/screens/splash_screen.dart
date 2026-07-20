@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
@@ -19,6 +21,14 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initialize() async {
+    try {
+      await _tryAutoLogin().timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      _go(const LoginScreen());
+    }
+  }
+
+  Future<void> _tryAutoLogin() async {
     final auth = AuthService();
     await auth.init();
 
