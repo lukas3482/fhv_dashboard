@@ -30,7 +30,7 @@ class _StundenplanScreenState extends State<StundenplanScreen> {
   static DateTime _anchorFor(StundenplanViewMode mode) {
     final today = _today;
     if (mode == StundenplanViewMode.grid) {
-      return today.subtract(Duration(days: today.weekday - 1));
+      return DateTime(today.year, today.month, today.day - (today.weekday - 1));
     }
     return today;
   }
@@ -93,12 +93,18 @@ class _StundenplanScreenState extends State<StundenplanScreen> {
   void _shift(int delta) {
     final mode = SettingsService().stundenplanViewMode.value;
     if (mode == StundenplanViewMode.list && _start == _today) {
-      final mondayThisWeek = _today.subtract(
-        Duration(days: _today.weekday - 1),
+      final mondayThisWeek = DateTime(
+        _today.year,
+        _today.month,
+        _today.day - (_today.weekday - 1),
       );
-      _start = mondayThisWeek.add(Duration(days: 7 * delta));
+      _start = DateTime(
+        mondayThisWeek.year,
+        mondayThisWeek.month,
+        mondayThisWeek.day + 7 * delta,
+      );
     } else {
-      _start = _start.add(Duration(days: 7 * delta));
+      _start = DateTime(_start.year, _start.month, _start.day + 7 * delta);
     }
     _load();
   }

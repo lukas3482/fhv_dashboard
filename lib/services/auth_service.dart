@@ -12,7 +12,6 @@ class AuthService {
   static const _loginUrl =
       'https://a5.fhv.at/ajax/120/LoginResponsive/LoginHandler';
   static const _sessionCheckUrl = 'https://a5.fhv.at/de/noten.php';
-  // domain-id 8 = FHV (from homeassistant integration reference)
   static const _domainId = '8';
 
   static final AuthService _instance = AuthService._internal();
