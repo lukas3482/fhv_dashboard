@@ -22,10 +22,13 @@ class CalendarGridView extends StatelessWidget {
   static const int _minEndHour = 18;
 
   List<DateTime> get _days {
-    final weekdays = List.generate(5, (i) => start.add(Duration(days: i)));
+    final weekdays = List.generate(
+      5,
+      (i) => DateTime(start.year, start.month, start.day + i),
+    );
     final weekend = List.generate(
       2,
-      (i) => start.add(Duration(days: 5 + i)),
+      (i) => DateTime(start.year, start.month, start.day + 5 + i),
     ).where((d) => (grouped[d] ?? const []).isNotEmpty);
     return [...weekdays, ...weekend];
   }

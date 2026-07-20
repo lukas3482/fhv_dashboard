@@ -96,7 +96,7 @@ class TimetableService {
 
   Future<Map<DateTime, List<TimetableEvent>>> fetchWeek(DateTime monday) async {
     await _ensurePersonalSchedule();
-    final sunday = monday.add(const Duration(days: 6));
+    final sunday = DateTime(monday.year, monday.month, monday.day + 6);
     final result = await _fetchRange(monday, sunday);
     await _saveCacheWeek(monday, result);
     return result;
