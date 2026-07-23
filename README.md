@@ -16,6 +16,5 @@ Inoffizielle Flutter-App für Studierende der Fachhochschule Vorarlberg. Bündel
 
 ## Technisch
 
-- Flutter (Material 3), unterstützt Android, iOS
+- Flutter, unterstützt Android, iOS (nicht getestet)
 - Ruft FHV-interne Webseiten (a5.fhv.at) über eine authentifizierte Session ab und parst die Inhalte clientseitig
-- iOS wurde bisher nicht getestet

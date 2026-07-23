@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_event_widget_description">Zeigt deine nächste Veranstaltung aus dem Stundenplan an.</string>
+    <string name="next_event_widget_default_header">FHV Dashboard</string>
+    <string name="next_event_widget_empty">Keine anstehende Veranstaltung</string>
+</resources>
