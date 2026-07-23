@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/timetable_event.dart';
 import 'auth_service.dart';
+import 'widget_service.dart';
 
 class TimetableService {
   static const _url =
@@ -46,6 +47,7 @@ class TimetableService {
       final file = await _nextEventCacheFile;
       await file.writeAsString(jsonEncode(event?.toCacheJson()));
     } catch (_) {}
+    await WidgetService.updateNextEvent(event);
   }
 
   Future<Map<DateTime, List<TimetableEvent>>?> loadCachedWeek(

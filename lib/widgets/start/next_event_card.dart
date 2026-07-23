@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/timetable_event.dart';
+import '../../utils/event_time_format.dart';
 
 class NextEventCard extends StatelessWidget {
   const NextEventCard({required this.event, super.key});
@@ -43,7 +44,7 @@ class NextEventCard extends StatelessWidget {
                         Text(
                           isOngoing
                               ? 'Läuft gerade'
-                              : 'Nächste Veranstaltung — ${_relativeDay(event.startDate)}',
+                              : 'Nächste Veranstaltung — ${EventTimeFormat.relativeDay(event.startDate)}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -70,7 +71,7 @@ class NextEventCard extends StatelessWidget {
                           color: Colors.grey,
                         ),
                         Text(
-                          '${_t(event.startDate)} – ${_t(event.endDate)}',
+                          '${EventTimeFormat.time(event.startDate)} – ${EventTimeFormat.time(event.endDate)}',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
@@ -105,51 +106,4 @@ class NextEventCard extends StatelessWidget {
     );
   }
 
-  static String _t(DateTime dt) =>
-      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-
-  static String _relativeDay(DateTime d) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final day = DateTime(d.year, d.month, d.day);
-    final diff = day.difference(today).inDays;
-    if (diff == 0) return 'Heute';
-    if (diff == 1) return 'Morgen';
-
-    final monday = today.subtract(Duration(days: today.weekday - 1));
-    final sunday = monday.add(const Duration(days: 6));
-    if (!day.isBefore(monday) && !day.isAfter(sunday)) {
-      const weekdays = [
-        'Montag',
-        'Dienstag',
-        'Mittwoch',
-        'Donnerstag',
-        'Freitag',
-        'Samstag',
-        'Sonntag',
-      ];
-      return weekdays[d.weekday - 1];
-    }
-
-    return _fmtDate(d);
-  }
-
-  static String _fmtDate(DateTime d) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mär',
-      'Apr',
-      'Mai',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Dez',
-    ];
-    final base = '${d.day}. ${months[d.month - 1]}';
-    return d.year == DateTime.now().year ? base : '$base ${d.year}';
-  }
 }
