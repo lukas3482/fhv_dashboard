@@ -41,7 +41,7 @@ class TimetableEvent {
     final parts = [if (examPart.isNotEmpty) examPart, ...extraExamParts];
 
     return TimetableEvent(
-      id: json['id'] as String? ?? '',
+      id: json['id']?.toString() ?? '',
       eventName: json['event_subject'] as String? ?? '',
       startDate: DateTime.parse(json['start_date'] as String),
       endDate: DateTime.parse(json['end_date'] as String),

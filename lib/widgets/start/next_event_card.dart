@@ -86,13 +86,53 @@ class NextEventCard extends StatelessWidget {
                             color: Colors.grey,
                           ),
                           const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              event.rooms,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (event.lecturers.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.person_outline,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              [event.rooms].join(' · '),
+                              event.lecturers,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ),
-                          Text(event.lecturers),
+                        ],
+                      ),
+                    ],
+                    if (event.comment.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.notes_outlined,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              event.comment,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
                         ],
                       ),
                     ],
