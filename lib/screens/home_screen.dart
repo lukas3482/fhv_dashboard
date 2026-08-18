@@ -6,6 +6,7 @@ import '../services/notification_service.dart';
 import '../widgets/home/info_dialog.dart';
 import 'grades_screen.dart';
 import 'login_screen.dart';
+import 'mensa_screen.dart';
 import 'pruefungstermine_screen.dart';
 import 'room_search_screen.dart';
 import 'settings_screen.dart';
@@ -20,14 +21,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const _mensaTabIndex = 5;
+
   int _currentIndex = 0;
 
-  static const _pages = [
-    StartScreen(),
+  static const _otherPages = [
     StundenplanScreen(),
     PruefungstermineScreen(),
     GradesScreen(),
     RoomSearchScreen(),
+    MensaScreen(),
   ];
 
   static const _titles = [
@@ -36,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Prüfungstermine',
     'Noten',
     'Räume',
+    'Mensa',
   ];
 
   @override
@@ -65,6 +69,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildBody() {
+    if (_currentIndex == 0) {
+      return StartScreen(
+        onOpenMensa: () => setState(() => _currentIndex = _mensaTabIndex),
+      );
+    }
+    return _otherPages[_currentIndex - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: _pages[_currentIndex],
+      body: _buildBody(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
@@ -117,6 +130,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.meeting_room_outlined),
             selectedIcon: Icon(Icons.meeting_room),
             label: 'Räume',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.restaurant_outlined),
+            selectedIcon: Icon(Icons.restaurant),
+            label: 'Mensa',
           ),
         ],
       ),

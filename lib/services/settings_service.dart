@@ -17,6 +17,7 @@ class SettingsService {
   static const defaultTargetEcts = 180;
   static const defaultDashboardCards = [
     DashboardCardType.nextEvent,
+    DashboardCardType.mensaToday,
     DashboardCardType.ectsProgress,
     DashboardCardType.profile,
     DashboardCardType.platforms,

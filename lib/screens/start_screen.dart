@@ -2,20 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../models/dashboard_card.dart';
 import '../models/grade.dart';
+import '../models/mensa_menu.dart';
 import '../models/profile_info.dart';
 import '../models/timetable_event.dart';
 import '../services/grades_service.dart';
+import '../services/mensa_service.dart';
 import '../services/profile_service.dart';
 import '../services/settings_service.dart';
 import '../services/timetable_service.dart';
 import '../widgets/start/ects_progress_card.dart';
 import '../widgets/start/error_card.dart';
+import '../widgets/start/mensa_today_card.dart';
 import '../widgets/start/next_event_card.dart';
 import '../widgets/start/platform_links_card.dart';
 import '../widgets/start/profile_card.dart';
 
 class StartScreen extends StatefulWidget {
-  const StartScreen({super.key});
+  const StartScreen({required this.onOpenMensa, super.key});
+
+  final VoidCallback onOpenMensa;
 
   @override
   State<StartScreen> createState() => _StartScreenState();
@@ -28,6 +33,7 @@ class _StartScreenState extends State<StartScreen> {
   TimetableEvent? _nextEvent;
   bool _nextEventChecked = false;
   Future<GradesResult?>? _gradesFuture;
+  Future<MensaDayMenu?>? _mensaFuture;
 
   @override
   void initState() {
@@ -35,6 +41,7 @@ class _StartScreenState extends State<StartScreen> {
     _load();
     _loadNextEvent();
     _loadGrades();
+    _loadMensa();
   }
 
   Future<void> _loadNextEvent({bool forceRefresh = false}) async {
@@ -118,9 +125,28 @@ class _StartScreenState extends State<StartScreen> {
     }
   }
 
+  void _loadMensa({bool forceRefresh = false}) {
+    setState(() {
+      _mensaFuture = _fetchMensaToday(forceRefresh: forceRefresh);
+    });
+  }
+
+  Future<MensaDayMenu?> _fetchMensaToday({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await MensaService().loadCachedToday();
+      if (cached != null) return cached;
+    }
+    try {
+      return await MensaService().fetchToday();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _refresh() async {
     _loadNextEvent(forceRefresh: true);
     _loadGrades(forceRefresh: true);
+    _loadMensa(forceRefresh: true);
     await _load(forceRefresh: true);
   }
 
@@ -128,6 +154,18 @@ class _StartScreenState extends State<StartScreen> {
     final event = _nextEvent;
     if (!_nextEventChecked || event == null) return const SizedBox.shrink();
     return NextEventCard(event: event);
+  }
+
+  Widget _buildMensaCard() {
+    return FutureBuilder<MensaDayMenu?>(
+      future: _mensaFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SizedBox.shrink();
+        }
+        return MensaTodayCard(day: snapshot.data, onTap: widget.onOpenMensa);
+      },
+    );
   }
 
   Widget _buildEctsCard() {
@@ -175,6 +213,8 @@ class _StartScreenState extends State<StartScreen> {
     switch (type) {
       case DashboardCardType.nextEvent:
         return _buildNextEventCard();
+      case DashboardCardType.mensaToday:
+        return _buildMensaCard();
       case DashboardCardType.ectsProgress:
         return _buildEctsCard();
       case DashboardCardType.profile:
