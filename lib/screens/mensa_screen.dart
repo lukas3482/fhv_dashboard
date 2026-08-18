@@ -77,9 +77,11 @@ class _MensaScreenState extends State<MensaScreen> {
                   child: FutureBuilder<MensaWeekMenu>(
                     future: _future,
                     builder: (context, snapshot) {
-                      final week = snapshot.data?.week ?? MensaService.isoWeekNumber(
-                        DateTime.now().add(Duration(days: 7 * _weekOffset)),
-                      );
+                      final week =
+                          snapshot.data?.week ??
+                          MensaService.isoWeekNumber(
+                            DateTime.now().add(Duration(days: 7 * _weekOffset)),
+                          );
                       final range = snapshot.data?.dateRangeLabel;
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -89,17 +91,11 @@ class _MensaScreenState extends State<MensaScreen> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.restaurant_outlined,
-                                  size: 16,
-                                  color: colorScheme.primary,
-                                ),
+                                Icon(Icons.restaurant_outlined, size: 16),
                                 const SizedBox(width: 6),
                                 Text(
                                   'KW $week',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
+                                  style: Theme.of(context).textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                               ],
@@ -109,9 +105,7 @@ class _MensaScreenState extends State<MensaScreen> {
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
                                   range,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
+                                  style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
                                         color: colorScheme.onSurfaceVariant,
                                       ),

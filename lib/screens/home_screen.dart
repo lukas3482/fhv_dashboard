@@ -21,26 +21,26 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _mensaTabIndex = 5;
+  static const _stundenplanTabIndex = 1;
+  static const _mensaTabIndex = 4;
+  // Not a bottom-nav destination — reached via an action button while on
+  // the Stundenplan tab. Kept in the same _currentIndex/AppBar/body
+  // machinery as the real tabs so the bottom nav stays visible instead of
+  // being replaced by a bare pushed route.
+  static const _pruefungstermineIndex = 5;
 
   int _currentIndex = 0;
 
+  // Pages for tabs 1..4; tab 0 (Start) is built separately since it needs
+  // the onOpenMensa callback below.
   static const _otherPages = [
     StundenplanScreen(),
-    PruefungstermineScreen(),
     GradesScreen(),
     RoomSearchScreen(),
     MensaScreen(),
   ];
 
-  static const _titles = [
-    'Start',
-    'Stundenplan',
-    'Prüfungstermine',
-    'Noten',
-    'Räume',
-    'Mensa',
-  ];
+  static const _titles = ['Start', 'Stundenplan', 'Noten', 'Räume', 'Mensa'];
 
   @override
   void initState() {
@@ -69,7 +69,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openPruefungstermine() {
+    setState(() => _currentIndex = _pruefungstermineIndex);
+  }
+
+  void _closePruefungstermine() {
+    setState(() => _currentIndex = _stundenplanTabIndex);
+  }
+
+  String get _title => _currentIndex == _pruefungstermineIndex
+      ? 'Prüfungstermine'
+      : _titles[_currentIndex];
+
   Widget _buildBody() {
+    if (_currentIndex == _pruefungstermineIndex) {
+      return const PruefungstermineScreen();
+    }
     if (_currentIndex == 0) {
       return StartScreen(
         onOpenMensa: () => setState(() => _currentIndex = _mensaTabIndex),
@@ -80,10 +95,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final showingExams = _currentIndex == _pruefungstermineIndex;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
+        leading: showingExams
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Zurück',
+                onPressed: _closePruefungstermine,
+              )
+            : null,
+        title: Text(_title),
         actions: [
+          if (_currentIndex == _stundenplanTabIndex)
+            IconButton(
+              icon: const Icon(Icons.assignment_outlined),
+              tooltip: 'Prüfungstermine',
+              onPressed: _openPruefungstermine,
+            ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: 'Über diese App',
@@ -103,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: _buildBody(),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
+        selectedIndex: showingExams ? _stundenplanTabIndex : _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: const [
           NavigationDestination(
@@ -115,11 +145,6 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.calendar_today_outlined),
             selectedIcon: Icon(Icons.calendar_today),
             label: 'Stundenplan',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment),
-            label: 'Prüfungen',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
