@@ -18,10 +18,31 @@ class _MensaScreenState extends State<MensaScreen> {
   int _weekOffset = 0;
   Future<MensaWeekMenu>? _future;
 
+  final _dayKeys = List.generate(5, (_) => GlobalKey());
+
   @override
   void initState() {
     super.initState();
     _load();
+    _future?.then(_scrollToRelevantDay).catchError((_) {});
+  }
+
+  void _scrollToRelevantDay(MensaWeekMenu menu) {
+    if (!mounted || _weekOffset != 0 || menu.isEmpty) return;
+    final weekday = DateTime.now().weekday;
+    final targetIndex = weekday <= 5 ? weekday - 1 : 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+      final target = _dayKeys[targetIndex].currentContext;
+      if (target == null) return;
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+        alignment: 0,
+      );
+    });
   }
 
   void _load({bool forceRefresh = false}) {
@@ -211,13 +232,19 @@ class _MensaScreenState extends State<MensaScreen> {
 
         return RefreshIndicator(
           onRefresh: () async => _load(forceRefresh: true),
-          child: ListView.separated(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(12),
-            itemCount: menu.days.length,
-            separatorBuilder: (context, i) => const SizedBox(height: 12),
-            itemBuilder: (context, i) => DayMenuCard(
-              day: menu.days[i],
-              isToday: menu.days[i].day == today,
+            child: Column(
+              children: [
+                for (var i = 0; i < menu.days.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 12),
+                  DayMenuCard(
+                    key: i < _dayKeys.length ? _dayKeys[i] : null,
+                    day: menu.days[i],
+                    isToday: menu.days[i].day == today,
+                  ),
+                ],
+              ],
             ),
           ),
         );
