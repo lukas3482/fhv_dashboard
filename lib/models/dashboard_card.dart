@@ -1,10 +1,18 @@
-enum DashboardCardType { nextEvent, ectsProgress, profile, platforms }
+enum DashboardCardType {
+  nextEvent,
+  mensaToday,
+  ectsProgress,
+  profile,
+  platforms,
+}
 
 extension DashboardCardTypeLabel on DashboardCardType {
   String get label {
     switch (this) {
       case DashboardCardType.nextEvent:
         return 'Nächste Veranstaltung';
+      case DashboardCardType.mensaToday:
+        return 'Mensa heute';
       case DashboardCardType.ectsProgress:
         return 'Studienfortschritt';
       case DashboardCardType.profile:

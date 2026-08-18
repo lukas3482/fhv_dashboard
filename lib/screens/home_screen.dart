@@ -6,6 +6,7 @@ import '../services/notification_service.dart';
 import '../widgets/home/info_dialog.dart';
 import 'grades_screen.dart';
 import 'login_screen.dart';
+import 'mensa_screen.dart';
 import 'pruefungstermine_screen.dart';
 import 'room_search_screen.dart';
 import 'settings_screen.dart';
@@ -20,23 +21,26 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const _stundenplanTabIndex = 1;
+  static const _mensaTabIndex = 4;
+  // Not a bottom-nav destination — reached via an action button while on
+  // the Stundenplan tab. Kept in the same _currentIndex/AppBar/body
+  // machinery as the real tabs so the bottom nav stays visible instead of
+  // being replaced by a bare pushed route.
+  static const _pruefungstermineIndex = 5;
+
   int _currentIndex = 0;
 
-  static const _pages = [
-    StartScreen(),
+  // Pages for tabs 1..4; tab 0 (Start) is built separately since it needs
+  // the onOpenMensa callback below.
+  static const _otherPages = [
     StundenplanScreen(),
-    PruefungstermineScreen(),
     GradesScreen(),
     RoomSearchScreen(),
+    MensaScreen(),
   ];
 
-  static const _titles = [
-    'Start',
-    'Stundenplan',
-    'Prüfungstermine',
-    'Noten',
-    'Räume',
-  ];
+  static const _titles = ['Start', 'Stundenplan', 'Noten', 'Räume', 'Mensa'];
 
   @override
   void initState() {
@@ -65,12 +69,51 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openPruefungstermine() {
+    setState(() => _currentIndex = _pruefungstermineIndex);
+  }
+
+  void _closePruefungstermine() {
+    setState(() => _currentIndex = _stundenplanTabIndex);
+  }
+
+  String get _title => _currentIndex == _pruefungstermineIndex
+      ? 'Prüfungstermine'
+      : _titles[_currentIndex];
+
+  Widget _buildBody() {
+    if (_currentIndex == _pruefungstermineIndex) {
+      return const PruefungstermineScreen();
+    }
+    if (_currentIndex == 0) {
+      return StartScreen(
+        onOpenMensa: () => setState(() => _currentIndex = _mensaTabIndex),
+      );
+    }
+    return _otherPages[_currentIndex - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showingExams = _currentIndex == _pruefungstermineIndex;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
+        leading: showingExams
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Zurück',
+                onPressed: _closePruefungstermine,
+              )
+            : null,
+        title: Text(_title),
         actions: [
+          if (_currentIndex == _stundenplanTabIndex)
+            IconButton(
+              icon: const Icon(Icons.assignment_outlined),
+              tooltip: 'Prüfungstermine',
+              onPressed: _openPruefungstermine,
+            ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: 'Über diese App',
@@ -88,9 +131,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: _pages[_currentIndex],
+      body: _buildBody(),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
+        selectedIndex: showingExams ? _stundenplanTabIndex : _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: const [
           NavigationDestination(
@@ -104,11 +147,6 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Stundenplan',
           ),
           NavigationDestination(
-            icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment),
-            label: 'Prüfungen',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.school_outlined),
             selectedIcon: Icon(Icons.school),
             label: 'Noten',
@@ -117,6 +155,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.meeting_room_outlined),
             selectedIcon: Icon(Icons.meeting_room),
             label: 'Räume',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.restaurant_outlined),
+            selectedIcon: Icon(Icons.restaurant),
+            label: 'Mensa',
           ),
         ],
       ),
