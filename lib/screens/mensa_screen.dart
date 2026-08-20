@@ -35,7 +35,7 @@ class _MensaScreenState extends State<MensaScreen> {
       await Future.delayed(const Duration(milliseconds: 250));
       if (!mounted) return;
       final target = _dayKeys[targetIndex].currentContext;
-      if (target == null) return;
+      if (target == null || !target.mounted) return;
       Scrollable.ensureVisible(
         target,
         duration: const Duration(milliseconds: 300),
