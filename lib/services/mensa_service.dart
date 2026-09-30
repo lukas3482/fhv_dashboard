@@ -27,9 +27,19 @@ class MensaService {
     'DONNERSTAG': 'Donnerstag',
     'FREITAG': 'Freitag',
   };
+  // Some weeks the PDF is only published in English, so each German day
+  // name also accepts its English fallback.
+  static const _dayTokens = {
+    'MONTAG': ['MONTAG', 'MONDAY'],
+    'DIENSTAG': ['DIENSTAG', 'TUESDAY'],
+    'MITTWOCH': ['MITTWOCH', 'WEDNESDAY'],
+    'DONNERSTAG': ['DONNERSTAG', 'THURSDAY'],
+    'FREITAG': ['FREITAG', 'FRIDAY'],
+  };
 
   static final _allergenCode = RegExp(r'^[ABCDEFGHLMNOPR]{1,10}$');
   static final _pricingMarker = RegExp(r'EUR\s*\d');
+  static final _headerPattern = RegExp(r'MEN[UÜ]\s*PLAN');
   static final _dateRangePattern = RegExp(
     r'\d{1,2}\.\s*[A-Za-zÄÖÜäöü]+\s*\d{4}\s*[–-]\s*\d{1,2}\.\s*[A-Za-zÄÖÜäöü]+\s*\d{4}',
   );
@@ -134,10 +144,13 @@ class MensaService {
       _parse(week: week, rawText: rawText);
 
   MensaWeekMenu _parse({required int week, required String rawText}) {
-    final firstHeader = rawText.indexOf('MENÜPLAN');
-    var section = firstHeader >= 0 ? rawText.substring(firstHeader) : rawText;
-    final secondHeader = section.indexOf('MENÜPLAN', 1);
-    if (secondHeader > 0) section = section.substring(0, secondHeader);
+    final headers = _headerPattern.allMatches(rawText).toList();
+    var section = headers.isEmpty
+        ? rawText
+        : rawText.substring(headers.first.start);
+    if (headers.length > 1) {
+      section = rawText.substring(headers.first.start, headers[1].start);
+    }
 
     final dateRangeLabel = _dateRangePattern.firstMatch(section)?.group(0);
 
@@ -185,20 +198,21 @@ class MensaService {
       if (_pricingMarker.hasMatch(line)) break;
 
       final dayMatch = _days.firstWhere(
-        (d) => line.startsWith(d),
+        (d) => _dayTokens[d]!.any(line.startsWith),
         orElse: () => '',
       );
       if (dayMatch.isNotEmpty) {
         flushPending();
         currentDay = dayMatch;
-        line = line.substring(dayMatch.length).trim();
+        final token = _dayTokens[dayMatch]!.firstWhere(line.startsWith);
+        line = line.substring(token.length).trim();
         if (line.isEmpty) continue;
       }
 
       if (currentDay == null) continue;
 
       final titleMatch = RegExp(
-        r'^(MENÜ\s*[12]|VEGAN)\b\.?\s*(.*)$',
+        r'^(MEN[UÜ]\s*[12]|VEGAN)\b\.?\s*(.*)$',
       ).firstMatch(line);
       if (titleMatch != null) {
         flushPending();

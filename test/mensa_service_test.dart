@@ -41,6 +41,27 @@ MONDAY MENU 1 CHICKPEA VEGETABLE CHILI ALLERGENS
 sour cream + dessert GLO
 ''';
 
+const _sampleEnglishOnlyPage = '''
+LEGEND OF ALLERGENS
+A Cereals containing gluten and products thereof H Nuts and products thereof
+MENÜPLAN KW34
+August 17th 2026 – August 21st, 2026
+MONDAY MENU 1 CHICKPEA VEGETABLE CHILI ALLERGENS
+sour cream dip + dessert GLO
+MENU 2 LÄNDLE VEAL SAUSAGE ALLERGENS
+ onion mustard sauce + french fries + salad GLO
+TUESDAY MENU 1 BAKED ROESTI POCKETS (HERB GERVAIS) ALLERGENS
+curd dip + salad garnish ACGLO
+VEGAN VEGAN DAILY SPECIAL
+WEDNESDAY MENU 1 SPICY MARINATED TOFU ALLERGENS
+cucumber relish + french fries + mixed salad FGLNO
+THURSDAY MENU 1 ORIENTAL LENTIL PAN ALLERGENS
+curry dip + dried fruit + mint + mixed salad AFGLNO
+FRIDAY MENU 1 OVEN FRESH BUCHTELN ALLERGENS
+vanilla sauce + rhubarb compote ACG
+MENU 1 + 1 PC. FRUIT: EUR 10,50/FHV EUR 7,90
+''';
+
 void main() {
   test('isoWeekNumber matches the real Aug 17-21 2026 menu (KW34)', () {
     expect(MensaService.isoWeekNumber(DateTime(2026, 8, 17)), 34);
@@ -97,6 +118,46 @@ void main() {
       for (final item in day.items) {
         expect(item.title, isNot(contains('EUR')));
         expect(item.title, isNot(contains('MONDAY')));
+      }
+    }
+  });
+
+  test('parseRawText falls back to English day names when no German plan is published', () {
+    final menu = MensaService().parseRawText(
+      week: 34,
+      rawText: _sampleEnglishOnlyPage,
+    );
+
+    expect(menu.isEmpty, isFalse);
+    expect(menu.days.map((d) => d.day), [
+      'Montag',
+      'Dienstag',
+      'Mittwoch',
+      'Donnerstag',
+      'Freitag',
+    ]);
+
+    final montag = menu.days[0];
+    expect(montag.items, hasLength(2));
+    expect(montag.items[0].category, 'Menü 1');
+    expect(montag.items[0].title, 'CHICKPEA VEGETABLE CHILI');
+    expect(montag.items[0].description, 'sour cream dip + dessert');
+    expect(montag.items[0].allergens, ['G', 'L', 'O']);
+    expect(montag.items[1].category, 'Menü 2');
+    expect(montag.items[1].title, 'LÄNDLE VEAL SAUSAGE');
+
+    final dienstag = menu.days[1];
+    expect(dienstag.items, hasLength(2));
+    expect(dienstag.items[1].category, 'Vegan');
+    expect(dienstag.items[1].title, 'VEGAN DAILY SPECIAL');
+
+    final freitag = menu.days[4];
+    expect(freitag.items, hasLength(1));
+    expect(freitag.items[0].title, 'OVEN FRESH BUCHTELN');
+
+    for (final day in menu.days) {
+      for (final item in day.items) {
+        expect(item.title, isNot(contains('EUR')));
       }
     }
   });
