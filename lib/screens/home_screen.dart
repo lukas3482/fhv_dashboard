@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import '../services/background_service.dart';
 import '../services/notification_service.dart';
+import '../services/update_service.dart';
 import '../widgets/home/info_dialog.dart';
+import '../widgets/home/update_dialog.dart';
 import 'grades_screen.dart';
 import 'login_screen.dart';
 import 'mensa_screen.dart';
@@ -47,6 +50,18 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     NotificationService().requestPermission();
     BackgroundService.initialize();
+    if (kReleaseMode) _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate() async {
+    final info = await UpdateService().checkForUpdate();
+    if (info == null || !mounted) return;
+    await UpdateService().markNotified(info);
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => UpdateDialog(info: info),
+    );
   }
 
   Future<void> _logout() async {
