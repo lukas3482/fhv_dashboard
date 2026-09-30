@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:html/parser.dart' as html_parser;
 
 import '../models/exam_appointment.dart';
@@ -23,16 +24,18 @@ class ExamService {
     return _parseHtml(response.data.toString());
   }
 
+  @visibleForTesting
+  List<ExamAppointment> parseHtml(String html) => _parseHtml(html);
+
   List<ExamAppointment> _parseHtml(String html) {
     final document = html_parser.parse(html);
-    final table = document.querySelector(
-      'table.table-bordered.table-update.table-info',
+    final rows = document.querySelectorAll(
+      'table.table-bordered.table-update.table-info tr.exam-row',
     );
-    if (table == null) return [];
 
     final results = <ExamAppointment>[];
 
-    for (final row in table.querySelectorAll('tr.exam-row')) {
+    for (final row in rows) {
       final isRegistered = row.classes.contains('info-success');
       final hasSubParts = row.querySelector('i.fa-circle-half-stroke') != null;
 
