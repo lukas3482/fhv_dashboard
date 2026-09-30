@@ -10,8 +10,9 @@ void showEventDetails(BuildContext context, TimetableEvent event) {
   showModalBottomSheet(
     context: context,
     showDragHandle: true,
-    builder: (context) => Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+    builder: (context) => SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
