@@ -1,3 +1,8 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
 name: Release
 
 on:
@@ -21,6 +26,28 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # Every release must be signed with the same key, or Android refuses
+      # to install an "update" over a previously (differently-signed) build
+      # — see android/app/build.gradle.kts for the signingConfig this feeds.
+      - name: Set up release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storePassword=$STORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=../upload-keystore.jks
+          EOF
+
+      # The version name (e.g. "1.2.0") comes from pubspec.yaml and is set
+      # manually when it should change. The build number is this workflow's
+      # run number, so it always increases and every merge to master gets a
+      # unique, installable release even if the version name didn't change.
       - name: Determine version
         id: version
         run: |
