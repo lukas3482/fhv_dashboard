@@ -55,6 +55,10 @@ app.*.map.json
 .env.*
 *.env
 
+/android/key.properties
+/android/*.jks
+/android/*.keystore
+
 # OS cruft
 Thumbs.db
 ehthumbs.db
