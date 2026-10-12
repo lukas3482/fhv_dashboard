@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'dashboard_card_frame.dart';
+
 class PlatformLink {
   final String label;
   final String url;
@@ -36,15 +38,17 @@ class PlatformLinksCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
+    return DashboardCardFrame(
+      icon: Icons.link,
+      title: 'FHV-Links',
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         children: [
           for (final link in _platformLinks)
             ListTile(
+              dense: true,
               leading: Icon(link.icon),
-              title: Text(link.label),
+              title: Text(link.label, style: const TextStyle(fontSize: 14)),
               trailing: const Icon(Icons.open_in_new, size: 18),
               onTap: () => _open(context, link.url),
             ),

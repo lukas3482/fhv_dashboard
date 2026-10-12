@@ -1,6 +1,7 @@
 enum DashboardCardType {
   nextEvent,
   mensaToday,
+  departures,
   ectsProgress,
   profile,
   platforms,
@@ -13,6 +14,8 @@ extension DashboardCardTypeLabel on DashboardCardType {
         return 'Nächste Veranstaltung';
       case DashboardCardType.mensaToday:
         return 'Mensa heute';
+      case DashboardCardType.departures:
+        return 'Busabfahrten';
       case DashboardCardType.ectsProgress:
         return 'Studienfortschritt';
       case DashboardCardType.profile:
