@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/profile_info.dart';
+import 'dashboard_card_frame.dart';
 
 class ProfileCard extends StatelessWidget {
   const ProfileCard({required this.profile, super.key});
@@ -10,57 +11,56 @@ class ProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: colorScheme.primaryContainer,
-                  child: Icon(
-                    Icons.person,
-                    color: colorScheme.onPrimaryContainer,
-                  ),
+    return DashboardCardFrame(
+      icon: Icons.person_outline,
+      title: 'Profil',
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.person,
+                  color: colorScheme.onPrimaryContainer,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        profile.name.isEmpty ? 'Unbekannt' : profile.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                        ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      profile.name.isEmpty ? 'Unbekannt' : profile.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
                       ),
-                      if (profile.affiliation.isNotEmpty)
-                        Text(
-                          profile.affiliation,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                    ],
-                  ),
+                    ),
+                    if (profile.affiliation.isNotEmpty)
+                      Text(
+                        profile.affiliation,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                  ],
                 ),
-              ],
-            ),
-            if (profile.matriculationNumber.isNotEmpty) ...[
-              const Divider(height: 24),
-              InfoRow('Matrikelnummer', profile.matriculationNumber),
+              ),
             ],
-            if (profile.personKey.isNotEmpty)
-              InfoRow('Personenkennzeichen', profile.personKey),
-            if (profile.contacts.isNotEmpty) ...[
-              const Divider(height: 24),
-              ...profile.contacts.map((c) => ContactRow(contact: c)),
-            ],
+          ),
+          if (profile.matriculationNumber.isNotEmpty) ...[
+            const Divider(height: 24),
+            InfoRow('Matrikelnummer', profile.matriculationNumber),
           ],
-        ),
+          if (profile.personKey.isNotEmpty)
+            InfoRow('Personenkennzeichen', profile.personKey),
+          if (profile.contacts.isNotEmpty) ...[
+            const Divider(height: 24),
+            ...profile.contacts.map((c) => ContactRow(contact: c)),
+          ],
+        ],
       ),
     );
   }
