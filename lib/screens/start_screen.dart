@@ -1,15 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/dashboard_card.dart';
+import '../models/departure.dart';
 import '../models/grade.dart';
 import '../models/mensa_menu.dart';
 import '../models/profile_info.dart';
 import '../models/timetable_event.dart';
+import '../services/departure_service.dart';
 import '../services/grades_service.dart';
 import '../services/mensa_service.dart';
 import '../services/profile_service.dart';
 import '../services/settings_service.dart';
 import '../services/timetable_service.dart';
+import '../widgets/start/dashboard_card_frame.dart';
+import '../widgets/start/departures_card.dart';
 import '../widgets/start/ects_progress_card.dart';
 import '../widgets/start/error_card.dart';
 import '../widgets/start/mensa_today_card.dart';
@@ -26,7 +32,7 @@ class StartScreen extends StatefulWidget {
   State<StartScreen> createState() => _StartScreenState();
 }
 
-class _StartScreenState extends State<StartScreen> {
+class _StartScreenState extends State<StartScreen> with WidgetsBindingObserver {
   ProfileInfo? _profile;
   String? _error;
   bool _isRefreshing = false;
@@ -34,6 +40,9 @@ class _StartScreenState extends State<StartScreen> {
   bool _nextEventChecked = false;
   Future<GradesResult?>? _gradesFuture;
   Future<MensaDayMenu?>? _mensaFuture;
+  List<Departure>? _departures;
+  String? _departuresError;
+  Timer? _departuresTimer;
 
   @override
   void initState() {
@@ -42,6 +51,74 @@ class _StartScreenState extends State<StartScreen> {
     _loadNextEvent();
     _loadGrades();
     _loadMensa();
+    _departures = DepartureService().cachedDepartures(
+      routeFilter: SettingsService().busRouteFilter.value,
+    );
+    _startDeparturesPolling();
+    SettingsService().busRouteFilter.addListener(_onBusFilterChanged);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    _departuresTimer?.cancel();
+    SettingsService().busRouteFilter.removeListener(_onBusFilterChanged);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // No point polling while the app isn't visible; catch up on return.
+    if (state == AppLifecycleState.resumed) {
+      _startDeparturesPolling();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _departuresTimer?.cancel();
+      _departuresTimer = null;
+    }
+  }
+
+  void _startDeparturesPolling() {
+    _departuresTimer?.cancel();
+    _loadDepartures();
+    _departuresTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _loadDepartures(),
+    );
+  }
+
+  void _onBusFilterChanged() {
+    setState(() {
+      _departures = DepartureService().cachedDepartures(
+        routeFilter: SettingsService().busRouteFilter.value,
+      );
+      _departuresError = null;
+    });
+    _loadDepartures();
+  }
+
+  Future<void> _loadDepartures() async {
+    final visible = SettingsService().dashboardCards.value.any(
+      (c) => c.type == DashboardCardType.departures && c.visible,
+    );
+    if (!visible) return;
+    try {
+      final fresh = await DepartureService().fetchDepartures(
+        routeFilter: SettingsService().busRouteFilter.value,
+      );
+      if (!mounted) return;
+      setState(() {
+        _departures = fresh;
+        _departuresError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      // Keep showing the last successful result if we have one.
+      setState(
+        () => _departuresError = e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
   }
 
   Future<void> _loadNextEvent({bool forceRefresh = false}) async {
@@ -147,6 +224,7 @@ class _StartScreenState extends State<StartScreen> {
     _loadNextEvent(forceRefresh: true);
     _loadGrades(forceRefresh: true);
     _loadMensa(forceRefresh: true);
+    _loadDepartures();
     await _load(forceRefresh: true);
   }
 
@@ -168,6 +246,18 @@ class _StartScreenState extends State<StartScreen> {
     );
   }
 
+  Widget _buildDeparturesCard() {
+    return DeparturesCard(
+      departures: _departures,
+      error: _departuresError,
+      filtered: SettingsService().busRouteFilter.value.isNotEmpty,
+      onRetry: () {
+        setState(() => _departuresError = null);
+        _loadDepartures();
+      },
+    );
+  }
+
   Widget _buildEctsCard() {
     return FutureBuilder<GradesResult?>(
       future: _gradesFuture,
@@ -181,32 +271,22 @@ class _StartScreenState extends State<StartScreen> {
 
   Widget _buildProfileCard() {
     if (_profile == null && _error != null) {
-      return ErrorCard(message: _error!, onRetry: _refresh);
+      return ErrorCard(
+        icon: Icons.person_outline,
+        title: 'Profil',
+        message: _error!,
+        onRetry: _refresh,
+      );
     }
     if (_profile == null) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
+      return const DashboardCardFrame(
+        icon: Icons.person_outline,
+        title: 'Profil',
+        padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(child: CircularProgressIndicator()),
       );
     }
     return ProfileCard(profile: _profile!);
-  }
-
-  Widget _buildPlatformsCard(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'FHV-Links',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const PlatformLinksCard(),
-      ],
-    );
   }
 
   Widget _buildCard(BuildContext context, DashboardCardType type) {
@@ -215,12 +295,14 @@ class _StartScreenState extends State<StartScreen> {
         return _buildNextEventCard();
       case DashboardCardType.mensaToday:
         return _buildMensaCard();
+      case DashboardCardType.departures:
+        return _buildDeparturesCard();
       case DashboardCardType.ectsProgress:
         return _buildEctsCard();
       case DashboardCardType.profile:
         return _buildProfileCard();
       case DashboardCardType.platforms:
-        return _buildPlatformsCard(context);
+        return const PlatformLinksCard();
     }
   }
 

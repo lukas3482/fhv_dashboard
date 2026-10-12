@@ -12,12 +12,14 @@ class SettingsService {
   static const _targetEctsKey = 'settings_target_ects';
   static const _dashboardCardsKey = 'settings_dashboard_cards';
   static const _stundenplanViewModeKey = 'settings_stundenplan_view_mode';
+  static const _busRouteFilterKey = 'settings_bus_route_filter';
 
   static const defaultRefreshIntervalMinutes = 30;
   static const defaultTargetEcts = 180;
   static const defaultDashboardCards = [
     DashboardCardType.nextEvent,
     DashboardCardType.mensaToday,
+    DashboardCardType.departures,
     DashboardCardType.ectsProgress,
     DashboardCardType.profile,
     DashboardCardType.platforms,
@@ -40,6 +42,8 @@ class SettingsService {
   final stundenplanViewMode = ValueNotifier<StundenplanViewMode>(
     StundenplanViewMode.list,
   );
+
+  final busRouteFilter = ValueNotifier<Set<String>>(const {});
 
   SharedPreferences? _prefs;
   bool _loaded = false;
@@ -73,6 +77,8 @@ class SettingsService {
       (m) => m.name == storedViewMode,
       orElse: () => StundenplanViewMode.list,
     );
+
+    busRouteFilter.value = {...?prefs.getStringList(_busRouteFilterKey)};
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -106,6 +112,11 @@ class SettingsService {
   Future<void> setStundenplanViewMode(StundenplanViewMode mode) async {
     stundenplanViewMode.value = mode;
     await _prefs?.setString(_stundenplanViewModeKey, mode.name);
+  }
+
+  Future<void> setBusRouteFilter(Set<String> keys) async {
+    busRouteFilter.value = keys;
+    await _prefs?.setStringList(_busRouteFilterKey, keys.toList());
   }
 
   List<String> _encodeDashboardCards(List<DashboardCardConfig> cards) =>

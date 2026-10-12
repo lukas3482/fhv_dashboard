@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/background_service.dart';
 import '../services/settings_service.dart';
+import 'bus_filter_screen.dart';
 import 'dashboard_customize_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -65,6 +66,24 @@ class SettingsScreen extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (_) => const DashboardCustomizeScreen(),
+              ),
+            ),
+          ),
+          ValueListenableBuilder<Set<String>>(
+            valueListenable: settings.busRouteFilter,
+            builder: (context, filter, _) => ListTile(
+              title: const Text('Busabfahrten filtern'),
+              subtitle: Text(
+                filter.isEmpty
+                    ? 'Alle Linien und Richtungen'
+                    : '${filter.length} '
+                          '${filter.length == 1 ? 'Richtung' : 'Richtungen'} '
+                          'ausgewählt',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BusFilterScreen()),
               ),
             ),
           ),
